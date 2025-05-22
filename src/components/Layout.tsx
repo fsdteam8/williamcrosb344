@@ -61,12 +61,12 @@ export default function Layout({ children }: LayoutProps) {
   // Navigation items
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+    { path: "/dashboard/modelcategory", icon: Home, label: "Model Category" },
     { path: "/dashboard/modeltheme", icon: Home, label: "Model Theme" },
     { path: "/dashboard/color", icon: Home, label: "Color" },
     { path: "/dashboard/manufacturer-options", icon: Home, label: "Manufacturer Options" },
     { path: "/dashboard/vanari-options", icon: Home, label: "Vanari Options" },
-    { path: "/dashboard/profile", icon: User, label: "Profile" },
-    { path: "/dashboard/settings", icon: Settings, label: "Settings" },
+    { path: "/dashboard/submission", icon: Home, label: "Submission" }
   ];
 
   const handleLogout = async () => {
@@ -192,7 +192,7 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 py-8 md:ml-64">
+      <main className="flex-1 py-8 ">
         <div className="px-4">
           {children ?? <Outlet />}
         </div>

@@ -95,7 +95,7 @@ export default function ModelSelection({
             <div className="space-y-4">
               <div className="aspect-video relative">
                 <img
-                  src={`https://ben10.scaleupdevagency.com/${selectedModel.inner_image}`}
+                  src={`${import.meta.env.VITE_BACKEND_URL}/${selectedModel.inner_image}`}
                   alt={selectedModel.name}
                   className="object-contain w-full h-full"
                 />

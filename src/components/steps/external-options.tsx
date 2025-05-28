@@ -1,137 +1,264 @@
 "use client"
 
 import type { StepProps } from "@/lib/types"
+import { useState, useEffect } from "react"
 import CaravanCarousel from "../CaravanCarousel"
 
 interface ExternalOptionsData {
   baseColor?: string
+  baseColorId?: number
   decalColor?: string
+  decalColorId?: number
+  colorTypes?: string[]
+}
+
+interface ModelColorWiseImage {
+  id: number
+  vehicle_model_id: number
+  color_1_id: number
+  color_2_id: number
+  image: string
+  created_at: string
+  updated_at: string
+  vehicle_model: {
+    id: number
+    name: string
+  }
+  color1: {
+    id: number
+    name: string
+  }
+  color2: {
+    id: number
+    name: string
+  }
 }
 
 export default function ExternalOptions({ formData, updateFormData }: StepProps) {
-  const baseColors = [
-    {
-      id: "silver",
-      name: "Silver",
-      image: "/assets/SILVER.png",
-    },
-    {
-      id: "white",
-      name: "White",
-      image: "/assets/SILVER.png",
-    },
-    {
-      id: "mocha",
-      name: "Mocha",
-      image: "/assets/SILVER.png",
-    },
-    {
-      id: "grey",
-      name: "Basalt Grey",
-      image: "/assets/SILVER.png",
-    },
-  ]
+  const [colorTypes, setColorTypes] = useState<string[]>([])
+  const [modelColorImages, setModelColorImages] = useState<ModelColorWiseImage[]>([])
+  const [loading, setLoading] = useState(false)
+  const [baseColors, setBaseColors] = useState<any[]>([])
+  const [decalColors, setDecalColors] = useState<any[]>([])
+  const [colorsLoading, setColorsLoading] = useState(true)
 
-  const decalColors = [
-    {
-      id: "snowy-teal",
-      name: "Snowy Teal",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "regal-blue",
-      name: "Regal Blue",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "opulent-orange",
-      name: "Opulent Orange",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "outback-red",
-      name: "Outback Red",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "sunrise-yellow",
-      name: "Sunrise Yellow",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "silver",
-      name: "Silver",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-    {
-      id: "forest-green",
-      name: "Forest Green",
-      image: "/assets/TEAL-DECAL-01.png",
-    },
-  ]
+  useEffect(() => {
+    const types = ["External Base Colours", "sabit"]
+    setColorTypes(types)
+    console.log(types, "colorTypes")
+  }, [])
+
+  // Fetch colors from API
+  useEffect(() => {
+    const fetchColors = async () => {
+      try {
+        setColorsLoading(true)
+        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const response = await fetch(`${baseUrl}/api/colors?type_wise=type_wise`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+
+          // Extract base colors and decal colors from API response
+          const baseColorsData = data["External Base Colours"] || []
+          const decalColorsData = data["External Decals Colours"] || []
+
+          // Transform API data to match component structure
+          const transformedBaseColors = baseColorsData.map((color: any) => ({
+            id: color.name.toLowerCase().replace(/\s+/g, "-"),
+            colorId: color.id,
+            name: color.name,
+            image: `${baseUrl}/${color.image}`,
+          }))
+
+          const transformedDecalColors = decalColorsData.map((color: any) => ({
+            id: color.name.toLowerCase().replace(/\s+/g, "-"),
+            colorId: color.id,
+            name: color.name,
+            image: `${baseUrl}/${color.image}`,
+          }))
+
+          setBaseColors(transformedBaseColors)
+          setDecalColors(transformedDecalColors)
+
+          console.log("Fetched colors from API:", {
+            baseColors: transformedBaseColors,
+            decalColors: transformedDecalColors,
+          })
+        } else {
+          console.warn("Failed to fetch colors from API")
+          // Keep existing fallback colors as backup
+        }
+      } catch (error) {
+        console.warn("Error fetching colors:", error)
+        // Keep existing fallback colors as backup
+      } finally {
+        setColorsLoading(false)
+      }
+    }
+
+    fetchColors()
+  }, [])
 
   const externalOptions =
     typeof formData.externalOptions === "object" && formData.externalOptions !== null
       ? (formData.externalOptions as ExternalOptionsData)
       : ({} as ExternalOptionsData)
 
+  // Fetch model-color-wise images when colors change
+  useEffect(() => {
+    const fetchModelColorImages = async () => {
+      if (externalOptions.baseColorId && externalOptions.decalColorId && formData.modelData?.id) {
+        try {
+          setLoading(true)
+          const baseUrl = "https://ben10.scaleupdevagency.com"
+          const response = await fetch(
+            `${baseUrl}/api/model-color-wise-image?model_id=${formData.modelData.id}&color_1_id=${externalOptions.baseColorId}&color_2_id=${externalOptions.decalColorId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          )
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data?.data) {
+              setModelColorImages(data.data.data)
+              console.log("Fetched model color images:", data.data.data)
+            } else {
+              console.warn("No model color images found")
+              setModelColorImages([])
+            }
+          } else {
+            console.warn("Failed to fetch model color images")
+            setModelColorImages([])
+          }
+        } catch (error) {
+          console.warn("Error fetching model color images:", error)
+          setModelColorImages([])
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchModelColorImages()
+  }, [externalOptions.baseColorId, externalOptions.decalColorId, formData.modelData?.id])
+
   const handleColorSelect = (colorData: Partial<ExternalOptionsData>) => {
-    updateFormData("externalOptions", { ...externalOptions, ...colorData })
+    updateFormData("externalOptions", {
+      ...externalOptions,
+      ...colorData,
+      colorTypes: colorTypes,
+    })
+  }
+
+  const handleBaseColorSelect = (color: any) => {
+    handleColorSelect({
+      baseColor: color.id,
+      baseColorId: color.colorId,
+    })
+  }
+
+  const handleDecalColorSelect = (color: any) => {
+    handleColorSelect({
+      decalColor: color.id,
+      decalColorId: color.colorId,
+    })
   }
 
   const basePrice = 79500
-  const caravanImages = ["/assets/Silver-Snowy-Teal-Rightside.png", "/assets/Silver-Snowy-Teal-Rightside.png", "/assets/Silver-Snowy-Teal-Rightside.png"]
+
+  // Get caravan images from API or fallback
+  const getCaravanImages = () => {
+    if (modelColorImages.length > 0) {
+      const baseUrl = "https://ben10.scaleupdevagency.com"
+      return modelColorImages.map((img) => `${baseUrl}/${img.image}`)
+    }
+
+    // Fallback images
+    return [
+      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals right side",
+      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals front view",
+      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals rear view",
+    ]
+  }
 
   return (
     <div className=" text-white mt-[80px]">
-
-
       <div className="grid grid-cols-5 gap-6 ">
         <div className="space-y-8 bg-[#202020] p-8 col-span-5 md:col-span-2 rounded-lg">
           {/* Base Colors Section */}
           <div>
             <h2 className="text-xl font-bold mb-6 text-start">Select Colour</h2>
             <h3 className="font-bold mb-8 uppercase lg:text-center text-start">EXTERNAL BASE COLOURS</h3>
+            {colorsLoading && (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-white">Loading colors...</div>
+              </div>
+            )}
+
+            {!colorsLoading && (!baseColors || baseColors.length === 0) && (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-gray-400">No base colors available</div>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4 justify-center">
-              {baseColors.slice(0, 3).map((color) => (
-                <button
-                  key={color.id}
-                  onClick={() => handleColorSelect({ baseColor: color.id })}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className={`w-16 h-16 border-2 ${externalOptions.baseColor === color.id ? "border-white" : "border-gray-600"
-                      } rounded overflow-hidden`}
+              {baseColors &&
+                baseColors.length > 0 &&
+                baseColors.slice(0, 3).map((color) => (
+                  <button
+                    key={color.id}
+                    onClick={() => handleBaseColorSelect(color)}
+                    className="flex flex-col items-center"
                   >
-                    <img
-                      src={color.image || "/placeholder.svg"}
-                      alt={color.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-xs mt-1 text-center">{color.name}</span>
-                </button>
-              ))}
+                    <div
+                      className={`w-16 h-16 border-2 ${
+                        externalOptions.baseColor === color.id ? "border-white" : "border-gray-600"
+                      } rounded overflow-hidden`}
+                    >
+                      <img
+                        src={color.image || "/placeholder.svg"}
+                        alt={color.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs mt-1 text-center">{color.name}</span>
+                  </button>
+                ))}
             </div>
 
             <div className="grid grid-cols-1 gap-4 justify-center mt-4">
               <div className="flex justify-center">
-                <button
-                  onClick={() => handleColorSelect({ baseColor: baseColors[3].id })}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className={`w-16 h-16 border-2 ${externalOptions.baseColor === baseColors[3].id ? "border-white" : "border-gray-600"
+                {baseColors && baseColors.length > 3 && (
+                  <button onClick={() => handleBaseColorSelect(baseColors[3])} className="flex flex-col items-center">
+                    <div
+                      className={`w-16 h-16 border-2 ${
+                        externalOptions.baseColor === baseColors[3].id ? "border-white" : "border-gray-600"
                       } rounded overflow-hidden`}
-                  >
-                    <img
-                      src={baseColors[3].image || "/placeholder.svg"}
-                      alt={baseColors[3].name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-xs mt-1 text-center">{baseColors[3].name}</span>
-                </button>
+                    >
+                      <img
+                        src={baseColors[3].image || "/placeholder.svg"}
+                        alt={baseColors[3].name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs mt-1 text-center">{baseColors[3].name}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -139,54 +266,74 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
           {/* Decal Colors Section */}
           <div>
             <h3 className="font-bold mb-8 uppercase lg:text-center text-start">EXTERNAL DECALS COLOURS</h3>
+            {colorsLoading && (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-white">Loading colors...</div>
+              </div>
+            )}
+
+            {!colorsLoading && (!decalColors || decalColors.length === 0) && (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-gray-400">No decal colors available</div>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4">
-              {decalColors.slice(0, 6).map((color) => (
-                <button
-                  key={color.id}
-                  onClick={() => handleColorSelect({ decalColor: color.id })}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className={`w-16 h-16 border-2 ${externalOptions.decalColor === color.id ? "border-white" : "border-gray-600"
-                      } rounded overflow-hidden`}
+              {decalColors &&
+                decalColors.length > 0 &&
+                decalColors.slice(0, 6).map((color) => (
+                  <button
+                    key={color.id}
+                    onClick={() => handleDecalColorSelect(color)}
+                    className="flex flex-col items-center"
                   >
-                    <img
-                      src={color.image || "/placeholder.svg"}
-                      alt={color.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-xs mt-1 text-center">
-                    {color.name.split(" ")[0]}
-                    <br />
-                    {color.name.split(" ").slice(1).join(" ")}
-                  </span>
-                </button>
-              ))}
+                    <div
+                      className={`w-16 h-16 border-2 ${
+                        externalOptions.decalColor === color.id ? "border-white" : "border-gray-600"
+                      } rounded overflow-hidden`}
+                    >
+                      <img
+                        src={color.image || "/placeholder.svg"}
+                        alt={color.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs mt-1 text-center">
+                      {color.name.split(" ")[0]}
+                      <br />
+                      {color.name.split(" ").slice(1).join(" ")}
+                    </span>
+                  </button>
+                ))}
             </div>
 
             <div className="grid grid-cols-1 gap-4 justify-center mt-4">
               <div className="flex justify-center">
-                <button
-                  onClick={() => handleColorSelect({ decalColor: decalColors[6].id })}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className={`w-16 h-16 border-2 ${externalOptions.decalColor === decalColors[6].id ? "border-white" : "border-gray-600"
+                {decalColors && decalColors.length > 6 && (
+                  <button onClick={() => handleDecalColorSelect(decalColors[6])} className="flex flex-col items-center">
+                    <div
+                      className={`w-16 h-16 border-2 ${
+                        externalOptions.decalColor === decalColors[6].id ? "border-white" : "border-gray-600"
                       } rounded overflow-hidden`}
-                  >
-                    <img
-                      src={decalColors[6].image || "/placeholder.svg"}
-                      alt={decalColors[6].name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <span className="text-xs mt-1 text-center">
-                    {decalColors[6].name.split(" ")[0]}
-                    <br />
-                    {decalColors[6].name.split(" ").slice(1).join(" ")}
-                  </span>
-                </button>
+                    >
+                      <img
+                        src={decalColors[6].image || "/placeholder.svg"}
+                        alt={decalColors[6].name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs mt-1 text-center">
+                      {decalColors[6].name.split(" ")[0]}
+                      <br />
+                      {decalColors[6].name.split(" ").slice(1).join(" ")}
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -196,37 +343,88 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
           <div className="space-y-6">
             <div className="mt-[-130px] mb-6 flex justify-center">
               <img
-                src="/assets/mainmodel.webp"
+                src="/placeholder.svg?height=200&width=250&query=caravan model preview"
                 alt="Caravan Preview"
                 className="w-[250px] h-[200px] object-contain"
               />
             </div>
-            <h3 className="text-center text-white">Your New SRC-14</h3>
+            <h3 className="text-center text-white">Your New {formData.modelData?.name || "SRC-14"}</h3>
 
-            <div className="aspect-video relative mb-6">
-              <CaravanCarousel
-                images={caravanImages}
-                baseColor={externalOptions.baseColor || "silver"}
-                decalColor={externalOptions.decalColor || "snowy-teal"}
-              />
-            </div>
+            {(loading || colorsLoading) && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-white">{colorsLoading ? "Loading colors..." : "Loading caravan images..."}</div>
+              </div>
+            )}
+
+            {!loading && !colorsLoading && baseColors.length === 0 && (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-white">No colors available</div>
+              </div>
+            )}
+
+            {!loading && !colorsLoading && (
+              <div className="aspect-video relative mb-6">
+                <CaravanCarousel
+                  images={getCaravanImages()}
+                  baseColor={externalOptions.baseColor || "silver"}
+                  decalColor={externalOptions.decalColor || "snowy-teal"}
+                />
+              </div>
+            )}
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between items-center">
                 <span className="text-start">External Base Colour</span>
                 <div className="flex items-center gap-2">
-                  <span className="capitalize">{externalOptions.baseColor || "Silver"}</span>
-                  <div className="w-5 h-5 bg-gray-300 rounded"></div>
+                  <span className="capitalize">
+                    {baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
+                  </span>
+                  <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
+                    <img
+                      src={
+                        baseColors.find((c) => c.id === externalOptions.baseColor)?.image ||
+                        "/placeholder.svg?height=20&width=20&query=silver color"
+                      }
+                      alt={baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg?height=20&width=20&query=silver color"
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-start">External Decals Colour</span>
                 <div className="flex items-center gap-2">
-                  <span className="capitalize">{(externalOptions.decalColor || "Snowy Teal").replace("-", " ")}</span>
-                  <div className="w-5 h-5 bg-teal-500 rounded"></div>
+                  <span className="capitalize">
+                    {decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
+                  </span>
+                  <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
+                    <img
+                      src={
+                        decalColors.find((c) => c.id === externalOptions.decalColor)?.image ||
+                        "/placeholder.svg?height=20&width=20&query=teal color"
+                      }
+                      alt={decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg?height=20&width=20&query=teal color"
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
+
+              {modelColorImages.length > 0 && (
+                <div className="mt-4 p-2 bg-green-900/20 rounded">
+                  <p className="text-xs text-green-400">✓ Custom color combination image loaded</p>
+                  <p className="text-xs text-gray-400">
+                    {modelColorImages[0].color1.name} + {modelColorImages[0].color2.name}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="mt-8 pt-4 border-t border-gray-700">

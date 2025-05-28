@@ -46,7 +46,7 @@ export default function ResetPassword() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/password/reset", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/password/reset`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

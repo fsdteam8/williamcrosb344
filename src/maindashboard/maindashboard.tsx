@@ -3,15 +3,13 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Search, Filter, Plus, Eye, Pencil, Trash2, ChevronRight, ChevronLeft } from "lucide-react"
+import { Search, Plus, Eye, Pencil, Trash2, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { toast } from "react-toastify"
 import { ModelForm } from "./components/AddEditeModelForm"
-import toast from "react-hot-toast"
 
 interface Model {
   id: number
@@ -19,12 +17,13 @@ interface Model {
   sleep_person: string
   description: string
   inner_image: string
+  outer_image: string
   category_id: string
   base_price: string
   price: string
   created_at: string
   updated_at: string
-  category?: string
+  category?: { name: string } | string
   status?: string
 }
 
@@ -41,6 +40,11 @@ export default function MainDashboard() {
 
   const itemsPerPage = 10
 
+  const getAuthToken = () => {
+    return localStorage.getItem("authToken") || "" // Return empty string if token not found
+  }
+
+
   useEffect(() => {
     fetchModels()
   }, [currentPage])
@@ -48,32 +52,35 @@ export default function MainDashboard() {
   const fetchModels = async () => {
     setLoading(true)
     try {
-      const response = await fetch(
-        `https://ben10.scaleupdevagency.com/api/models`,
-      )
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
         throw new Error("Failed to fetch models")
       }
 
       const data = await response.json()
-      setModels(data.data.data)
 
-      // Assuming the API returns data in a standard format
-      // If not, you'll need to adjust this based on the actual response structure
-    
+      // Make sure the data structure matches what you expect
+      const modelsData = data.data?.data || data.data || data
+      setModels(modelsData)
 
+      // Set total items based on the response
+      setTotalItems(data.data?.total || modelsData.length)
     } catch (error) {
       console.error("Error fetching models:", error)
-      // Use placeholder 
+      toast.error("Failed to fetch models")
     } finally {
       setLoading(false)
     }
   }
 
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
-    // In a real app, you might want to debounce this and fetch filtered results
   }
 
   const toggleSelectAll = () => {
@@ -92,75 +99,140 @@ export default function MainDashboard() {
     }
   }
 
-  const handleAddModel = async (formData: any) => {
+  const handleAddModel = async (data: any) => {
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/models", {
+      const token = getAuthToken()
+
+      // Check if data is FormData (has file) or regular object
+      const isFormData = data instanceof FormData
+
+      const requestOptions: RequestInit = {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(!isFormData && { "Content-Type": "application/json" }),
         },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to create model")
+        body: isFormData ? data : JSON.stringify(data),
       }
 
-      const data = await response.json()
+      console.log("Request options:", requestOptions)
+      console.log("Data being sent:", isFormData ? "FormData (check network tab)" : data)
 
-      // Refresh the models list
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models`, requestOptions)
+
+      if (!response.ok) {
+        const errorData = await response.text()
+        console.error("API Error:", errorData)
+        throw new Error(`Failed to create model: ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      console.log("API Response:", responseData)
+
       fetchModels()
-
-      return data
+      setIsAddModalOpen(false)
+      toast.success("Model created successfully")
+      return responseData
     } catch (error) {
       console.error("Error creating model:", error)
+      toast.error("Failed to create model")
       throw error
     }
   }
 
-  const handleEditModel = async (formData: any) => {
+  const handleEditModel = async (formData: FormData) => {
     if (!currentModel) return
 
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/models/${currentModel.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+      const token = getAuthToken()
+
+      // Create a new FormData and add all text fields
+      const submitData = new FormData()
+
+      // Always send all text fields (required fields with fallbacks to current values)
+      submitData.append("name", formData.get("name") || currentModel.name)
+      submitData.append("sleep_person", formData.get("sleep_person") || currentModel.sleep_person)
+      submitData.append("description", formData.get("description") || currentModel.description)
+      submitData.append("category_id", formData.get("category_id") || currentModel.category_id)
+      submitData.append("base_price", formData.get("base_price") || currentModel.base_price)
+      submitData.append("price", formData.get("price") || currentModel.price)
+
+      // Optional text fields - always send (empty string if not provided)
+      submitData.append("status", formData.get("status") || currentModel.status || "")
+
+      // Handle image fields - only send if new file is uploaded
+      const imageFields = [
+        "inner_image",
+        "outer_image", // Assuming you have an outer_image field
+        // Add other image fields if you have them, like:
+        // "outer_image",
+        // "gallery_images",
+      ]
+
+      imageFields.forEach((field) => {
+        const file = formData.get(field)
+        // Only append image field if a new file was actually uploaded
+        if (file instanceof File && file.size > 0) {
+          submitData.append(field, file)
+        }
+        // Don't send anything for this field if no new file was uploaded
       })
 
-      if (!response.ok) {
-        throw new Error("Failed to update model")
+      // Add _method for Laravel PUT request
+      submitData.append("_method", "PUT")
+
+      // Debug: Log what's being sent
+      console.log("Submitting text fields and new images only:", Object.fromEntries(submitData.entries()))
+
+      const requestOptions: RequestInit = {
+        method: "POST", // Laravel requires POST with _method=PUT for file uploads
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type for FormData, let browser set it with boundary
+        },
+        body: submitData,
       }
 
-      const data = await response.json()
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models/${currentModel.id}?_method=PUT`, requestOptions)
 
-      // Refresh the models list
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("API Error:", errorData)
+        throw new Error(`Failed to update model: ${response.status}`)
+      }
+
+      const responseData = await response.json()
+      console.log("API Response:", responseData)
+
       fetchModels()
-
-      return data
+      setIsEditModalOpen(false)
+      setCurrentModel(null)
+      toast.success("Model updated successfully")
+      return responseData
     } catch (error) {
       console.error("Error updating model:", error)
+      toast.error("Failed to update model")
       throw error
     }
   }
 
   const handleDeleteModel = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this model?")) return
 
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/models/${id}`, {
+      const token = getAuthToken()
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
 
       if (!response.ok) {
         throw new Error("Failed to delete model")
       }
 
-      // Refresh the models list
       fetchModels()
-
       toast.success("Model deleted successfully")
     } catch (error) {
       console.error("Error deleting model:", error)
@@ -178,7 +250,11 @@ export default function MainDashboard() {
   const filteredModels = models.filter(
     (model) =>
       model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      model.category?.toLowerCase().includes(searchQuery.toLowerCase()),
+      (typeof model.category === "string"
+        ? model.category.toLowerCase().includes(searchQuery.toLowerCase())
+        : typeof model.category === "object" && model.category !== null && "name" in model.category
+        ? model.category.name.toLowerCase().includes(searchQuery.toLowerCase())
+        : false),
   )
 
   return (
@@ -198,14 +274,6 @@ export default function MainDashboard() {
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search models..." className="pl-8" value={searchQuery} onChange={handleSearch} />
         </div>
-        <DropdownMenu>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>All Categories</DropdownMenuItem>
-            <DropdownMenuItem>Pattern Collection</DropdownMenuItem>
-            <DropdownMenuItem>Published</DropdownMenuItem>
-            <DropdownMenuItem>Draft</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <div className="border rounded-md">
@@ -218,12 +286,14 @@ export default function MainDashboard() {
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
-              <TableHead>Tiles</TableHead>
-              <TableHead>Title</TableHead>
+              <TableHead>Images</TableHead>
+              <TableHead>Model</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Sleep person</TableHead>
               <TableHead>Added</TableHead>
-              <TableHead>Action</TableHead>
+              <TableHead>Base_price</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Auction</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -253,20 +323,26 @@ export default function MainDashboard() {
                   <TableCell>
                     <div className="h-12 w-12 rounded overflow-hidden border">
                       <img
-                        src={model.inner_image || `/placeholder.svg?height=60&width=60&query=${model.name}`}
+                        src={
+                          model.outer_image
+                            ? `${import.meta.env.VITE_BACKEND_URL}/${model.outer_image}`
+                            : `/placeholder.svg?height=60&width=60&query=${model.name}`
+                        }
                         alt={model.name}
                         className="h-full w-full object-cover"
                       />
                     </div>
                   </TableCell>
                   <TableCell>{model.name}</TableCell>
-                  <TableCell>{model.category || "Pattern Collection"}</TableCell>
                   <TableCell>
-                    <Badge variant={model.status === "Published" ? "outline" : "secondary"}>
-                      {model.status || "Published"}
-                    </Badge>
+                    {typeof model.category === "object" && model.category !== null
+                      ? model.category.name
+                      : model.category_id}
                   </TableCell>
+                  <TableCell>{model.sleep_person}</TableCell>
                   <TableCell>{new Date(model.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>${model.base_price}</TableCell>
+                  <TableCell>${model.price}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button variant="ghost" size="icon" title="View">
@@ -289,7 +365,7 @@ export default function MainDashboard() {
 
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-muted-foreground">
-          Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} from{" "}
+          Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
           {totalItems}
         </div>
         <div className="flex items-center gap-1">
@@ -347,12 +423,14 @@ export default function MainDashboard() {
       <ModelForm open={isAddModalOpen} onOpenChange={setIsAddModalOpen} onSubmit={handleAddModel} />
 
       {/* Edit Model Modal */}
-      <ModelForm
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        initialData={currentModel || undefined}
-        onSubmit={handleEditModel}
-      />
+      {currentModel && (
+        <ModelForm
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          initialData={currentModel}
+          onSubmit={handleEditModel}
+        />
+      )}
     </div>
   )
 }

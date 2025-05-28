@@ -18,9 +18,10 @@ import ModelTheme from "./modeltheme/ModelTheme";
 import MainDashboard from "./maindashboard/maindashboard";
 import Color from "./color/color";
 import Manufacturer from "./ManufacturerOptions/ManufacturerOptions";
-import Vanari from "./Vanari/Vanari";
 import Submission from "./Submission/Submission";
 import ModelCategory from "./ModelCategory/ModelCategory";
+import ModelColorWiseImage from "./modelcolorwiseimage/modelcolorwiseimage";
+import ModelThemeWiseImage from "./modelthemewiseimage/modelthemewiseimage";
 
 // Route paths as constants for maintainability
 const ROUTE_PATHS = {
@@ -71,13 +72,15 @@ function App() {
           <Route path="modelcategory" element={<ModelCategory />} />
           <Route path="modeltheme" element={<ModelTheme />} />
           <Route path="color" element={<Color />} />
+          <Route path="modelcolorwiseimage" element={<ModelColorWiseImage />} />
+          <Route path="modelthemewiseimage" element={<ModelThemeWiseImage />} />
           <Route path="manufacturer-options" element={<Manufacturer />} />
-          <Route path="vanari-options" element={<Vanari />} />
           <Route path="submission" element={<Submission />} />
         </Route>
 
         {/* Catch-all route for 404 */}
         <Route path="*" element={<ErrorPage />} />
+        
       </Route>
     )
   );

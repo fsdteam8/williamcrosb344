@@ -15,7 +15,7 @@ export default function ForgotPassword() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/password/email", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/password/email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,8 +117,8 @@ export default function ForgotPassword() {
             <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
               If you don't receive an email within a few minutes, check your spam folder or try again.
             </p>
-            <button 
-              onClick={() => setEmailSent(false)} 
+            <button
+              onClick={() => setEmailSent(false)}
               className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
             >
               Try again

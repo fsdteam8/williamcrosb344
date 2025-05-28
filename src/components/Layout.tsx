@@ -64,8 +64,9 @@ export default function Layout({ children }: LayoutProps) {
     { path: "/dashboard/modelcategory", icon: Home, label: "Model Category" },
     { path: "/dashboard/modeltheme", icon: Home, label: "Model Theme" },
     { path: "/dashboard/color", icon: Home, label: "Color" },
+    { path: "/dashboard/modelcolorwiseimage", icon: Home, label: "ModelColorWiseImage" },
+    { path: "/dashboard/modelthemewiseimage", icon: Home, label: "ModelThemeWiseImage" },
     { path: "/dashboard/manufacturer-options", icon: Home, label: "Manufacturer Options" },
-    { path: "/dashboard/vanari-options", icon: Home, label: "Vanari Options" },
     { path: "/dashboard/submission", icon: Home, label: "Submission" }
   ];
 
@@ -82,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
 
     try {
       await axios.post(
-        "https://ben10.scaleupdevagency.com/api/logout",
+        `${import.meta.env.VITE_BACKEND_URL}/api/logout`,
         {},
         {
           headers: {

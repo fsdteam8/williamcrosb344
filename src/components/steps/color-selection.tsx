@@ -1,43 +1,243 @@
 "use client"
 
-import type { StepProps } from "@/lib/types"
+import { useState, useEffect } from "react"
+import type { StepProps, Theme, ThemeWiseImage } from "@/lib/types"
 
 interface ColorSelectionData {
-  theme?: string
-  baseColor?: string
-  decalColor?: string
-  flooring?: string
-  cabinetry?: string
-  benchtop?: string
-  splashback?: string
-  fabric?: string
-  leather?: string
+  themeId?: number
+  themeName?: string
+  themeImage?: string
+  selectedTheme?: Theme // Pass the complete theme object
 }
 
 export default function ColorSelection({ formData, updateFormData }: StepProps) {
-  const themes = [
-    { id: "coastal-luxe", name: "Coastal Luxe" },
-    { id: "city-oasis", name: "City Oasis" },
-    { id: "silver-glamour", name: "Silver Glamour" },
-    { id: "urban-glam", name: "Urban Glam" },
-    { id: "graphite-storm", name: "Graphite Storm" },
-    { id: "shadow-grove", name: "Shadow Grove" },
-    { id: "subtle-elegance", name: "Subtle Elegance" },
-    { id: "ocean-blue", name: "Ocean Blue" },
-    { id: "blue-lagoon", name: "Blue Lagoon" },
-  ]
+  const [themes, setThemes] = useState<Theme[]>([])
+  const [themeWiseImage, setThemeWiseImage] = useState<ThemeWiseImage | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const color =
     typeof formData.color === "object" && formData.color !== null
       ? (formData.color as ColorSelectionData)
       : ({} as ColorSelectionData)
 
-  const handleColorSelect = (colorData: Partial<ColorSelectionData>) => {
-    updateFormData("color", { ...color, ...colorData })
+  // Fetch themes on component mount
+  useEffect(() => {
+    const fetchThemes = async () => {
+      try {
+        setLoading(true)
+
+        // Fallback themes that match the actual API structure
+        const fallbackThemes: Theme[] = [
+          {
+            id: 10,
+            name: "Coastal Luxe",
+            image: "uploads/1748406687_SRC16-Snowy-River-Caravans-LRV231154-Theme-3.png",
+            flooring_name: "Flooring - Montreal VFT10120507",
+            flooring_image: "uploads/1748406687_Montreal-VFT10120507-1.jpg",
+            cabinetry_1_name: "All Cabinetry - White 0949",
+            cabinetry_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
+            table_top_1_name: "Benchtops - Aged Ash 8844D8",
+            table_top_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
+            seating_1_name: "Fabric - Kiama Cobblestone S213 75A-1",
+            seating_1_image: "uploads/1748405007_Kiama-Cobblestone-S213-75A-1-1.jpg",
+            seating_2_name: "Leather - Taupe 0621-B",
+            seating_2_image: "uploads/1748405007_Taupe-0621-B.jpg",
+            cabinetry_2_name: "All Cabinetry - White 0949",
+            cabinetry_2_image: "uploads/1748405007_White-0949-2.jpg",
+            table_top_2_name: "Splashback - White 0949",
+            table_top_2_image: "uploads/1748405007_White-0949-2.jpg",
+            created_at: "2025-05-28T04:03:27.000000Z",
+            updated_at: "2025-05-28T04:31:27.000000Z",
+          },
+          {
+            id: 11,
+            name: "Grey Oasis",
+            image: "uploads/1748409412_localhost_5173_ (2).png",
+            flooring_name: "Alana Sutton",
+            flooring_image: "uploads/1748409412_localhost_5173_ (5).png",
+            cabinetry_1_name: "Yoshi Stuart",
+            cabinetry_1_image: "uploads/1748409412_localhost_5173_dashboard.png",
+            table_top_1_name: "Rana Wilkerson",
+            table_top_1_image: "uploads/1748409412_localhost_5173_ (1).png",
+            seating_1_name: "Fletcher Good",
+            seating_1_image: "uploads/1748409412_localhost_5173_ (5).png",
+            seating_2_name: "Xantha Craft",
+            seating_2_image: "uploads/1748409412_localhost_5173_dashboard (2).png",
+            cabinetry_2_name: "Knox Winters",
+            cabinetry_2_image: "uploads/1748409412_localhost_5173_ (5).png",
+            table_top_2_name: "Illiana Levine",
+            table_top_2_image: "uploads/1748409412_localhost_5173_dashboard.png",
+            created_at: "2025-05-28T05:16:52.000000Z",
+            updated_at: "2025-05-28T05:16:52.000000Z",
+          },
+        ]
+
+        try {
+          // Try to fetch from API with timeout
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
+          const response = await fetch("https://ben10.scaleupdevagency.com/api/themes", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+          })
+
+          clearTimeout(timeoutId)
+
+          if (response.ok) {
+            const data = await response.json()
+
+            if (data.success && data.data?.data && data.data.data.length > 0) {
+              console.log("Successfully fetched themes from API")
+              setThemes(data.data.data)
+
+              // Auto-select first theme if none selected
+              if (!color.themeId) {
+                const firstTheme = data.data.data[0]
+                handleThemeSelect(firstTheme)
+              }
+            } else {
+              throw new Error("Invalid API response structure")
+            }
+          } else {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+        } catch (apiError) {
+          console.warn("API fetch failed, using fallback themes:", apiError)
+          // Use fallback themes that match the actual API structure
+          setThemes(fallbackThemes)
+          if (!color.themeId) {
+            handleThemeSelect(fallbackThemes[0])
+          }
+        }
+
+        setLoading(false)
+      } catch (error) {
+        console.error("Error in fetchThemes:", error)
+        // Use fallback data on any error
+        const fallbackThemes: Theme[] = [
+          {
+            id: 10,
+            name: "Coastal Luxe",
+            image: "uploads/1748406687_SRC16-Snowy-River-Caravans-LRV231154-Theme-3.png",
+            flooring_name: "Flooring - Montreal VFT10120507",
+            flooring_image: "uploads/1748406687_Montreal-VFT10120507-1.jpg",
+            cabinetry_1_name: "All Cabinetry - White 0949",
+            cabinetry_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
+            table_top_1_name: "Benchtops - Aged Ash 8844D8",
+            table_top_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
+            seating_1_name: "Fabric - Kiama Cobblestone S213 75A-1",
+            seating_1_image: "uploads/1748405007_Kiama-Cobblestone-S213-75A-1-1.jpg",
+            seating_2_name: "Leather - Taupe 0621-B",
+            seating_2_image: "uploads/1748405007_Taupe-0621-B.jpg",
+            cabinetry_2_name: "All Cabinetry - White 0949",
+            cabinetry_2_image: "uploads/1748405007_White-0949-2.jpg",
+            table_top_2_name: "Splashback - White 0949",
+            table_top_2_image: "uploads/1748405007_White-0949-2.jpg",
+            created_at: "2025-05-28T04:03:27.000000Z",
+            updated_at: "2025-05-28T04:31:27.000000Z",
+          },
+          {
+            id: 11,
+            name: "Grey Oasis",
+            image: "uploads/1748409412_localhost_5173_ (2).png",
+            flooring_name: "Alana Sutton",
+            flooring_image: "uploads/1748409412_localhost_5173_ (5).png",
+            cabinetry_1_name: "Yoshi Stuart",
+            cabinetry_1_image: "uploads/1748409412_localhost_5173_dashboard.png",
+            table_top_1_name: "Rana Wilkerson",
+            table_top_1_image: "uploads/1748409412_localhost_5173_ (1).png",
+            seating_1_name: "Fletcher Good",
+            seating_1_image: "uploads/1748409412_localhost_5173_ (5).png",
+            seating_2_name: "Xantha Craft",
+            seating_2_image: "uploads/1748409412_localhost_5173_dashboard (2).png",
+            cabinetry_2_name: "Knox Winters",
+            cabinetry_2_image: "uploads/1748409412_localhost_5173_ (5).png",
+            table_top_2_name: "Illiana Levine",
+            table_top_2_image: "uploads/1748409412_localhost_5173_dashboard.png",
+            created_at: "2025-05-28T05:16:52.000000Z",
+            updated_at: "2025-05-28T05:16:52.000000Z",
+          },
+        ]
+
+        setThemes(fallbackThemes)
+        if (!color.themeId) {
+          handleThemeSelect(fallbackThemes[0])
+        }
+        setLoading(false)
+      }
+    }
+
+    fetchThemes()
+  }, [])
+
+  // Fetch theme-wise image when theme or model changes
+  useEffect(() => {
+    const fetchThemeWiseImage = async () => {
+      if (color.themeId && formData.modelData?.id) {
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
+          const response = await fetch(
+            `https://ben10.scaleupdevagency.com/api/model-theme-wise-image?model_id=${formData.modelData.id}&theme_id=${color.themeId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              signal: controller.signal,
+            },
+          )
+
+          clearTimeout(timeoutId)
+
+          if (response.ok) {
+            const data = await response.json()
+
+            if (data.success && data.data?.data && data.data.data.length > 0) {
+              setThemeWiseImage(data.data.data[0])
+            } else {
+              console.warn("No theme-wise image found")
+              setThemeWiseImage(null)
+            }
+          } else {
+            console.warn("Failed to fetch theme-wise image")
+            setThemeWiseImage(null)
+          }
+        } catch (error) {
+          console.warn("Error fetching theme-wise image (likely CORS):", error)
+          setThemeWiseImage(null)
+        }
+      }
+    }
+
+    fetchThemeWiseImage()
+  }, [color.themeId, formData.modelData?.id])
+
+  const handleThemeSelect = (theme: Theme) => {
+    const colorData: ColorSelectionData = {
+      themeId: theme.id,
+      themeName: theme.name,
+      themeImage: theme.image,
+      selectedTheme: theme, // Pass the complete theme object
+    }
+    updateFormData("color", colorData)
   }
 
-  // Get the selected theme name for display
-  const selectedThemeName = themes.find((t) => t.id === color.theme)?.name || "Select Theme"
+  const selectedTheme = themes.find((t) => t.id === color.themeId)
+  const baseUrl = "https://ben10.scaleupdevagency.com"
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Loading themes...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col md:flex-row gap-6 text-white mt-[80px]">
@@ -48,124 +248,148 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
           {themes.map((theme) => (
             <button
               key={theme.id}
-              onClick={() => handleColorSelect({ theme: theme.id })}
-              className={`py-2 px-3 text-sm text-center rounded ${color.theme === theme.id ? "bg-[#FFE4A8] text-black" : "bg-[#1e1e1e] text-white hover:bg-[#333]"
-                }`}
+              onClick={() => handleThemeSelect(theme)}
+              className={`py-2 px-3 text-sm text-center rounded ${
+                color.themeId === theme.id ? "bg-[#FFE4A8] text-black" : "bg-[#1e1e1e] text-white hover:bg-[#333]"
+              }`}
             >
               {theme.name}
             </button>
           ))}
         </div>
 
-        {color.theme && (
+        {selectedTheme && (
           <div className="bg-[#202020] space-y-2">
             <div className="border-b border-[#333] py-12">
-              <h2 className="text-center uppercase font-bold text-xl">{selectedThemeName}</h2>
+              <h2 className="text-center uppercase font-bold text-xl">{selectedTheme.name}</h2>
             </div>
 
             <div className="space-y-6 py-12">
+              {/* Flooring */}
               <div className="flex items-center justify-center">
                 <div>
                   <h3 className="uppercase font-bold mb-2">Flooring</h3>
                   <div className="">
-                    <button
-                      onClick={() => handleColorSelect({ flooring: "montreal-vt1205007" })}
-                      className={`border-2 ${color.flooring === "montreal-vt1205007" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
-                      <img src="/assets/Montreal-VFT10120507-1.jpg" alt="Montreal VT1205007" className="w-24 h-20 object-cover" />
-                    </button>
-                    <div className="text-xs">
-                      <p>Flooring</p>
-                      <p>Montreal</p>
-                      <p>VT1205007</p>
+                    <div className="border-2 border-[#FFD700]">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.flooring_image}`}
+                        alt={selectedTheme.flooring_name}
+                        className="w-24 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=96&query=wood flooring sample"
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs mt-1">
+                      <p className="truncate max-w-[96px]" title={selectedTheme.flooring_name}>
+                        {selectedTheme.flooring_name}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Cabinetry */}
               <div className="flex items-center justify-center">
                 <div>
                   <h3 className="uppercase font-bold mb-2">Cabinetry</h3>
                   <div className="">
-                    <button
-                      onClick={() => handleColorSelect({ cabinetry: "white-d049" })}
-                      className={`border-2 ${color.cabinetry === "white-d049" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
-                      <img src="/assets/White-0949-2.jpg" alt="White D049" className="w-24 h-20 object-cover" />
-                    </button>
-                    <div className="text-xs">
-                      <p>All Cabinetry</p>
-                      <p>White D049</p>
+                    <div className="border-2 border-[#FFD700]">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.cabinetry_1_image}`}
+                        alt={selectedTheme.cabinetry_1_name}
+                        className="w-24 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=96&query=white cabinet sample"
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs mt-1">
+                      <p className="truncate max-w-[96px]" title={selectedTheme.cabinetry_1_name}>
+                        {selectedTheme.cabinetry_1_name}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Tabletop and Splashback */}
               <div>
-                <h3 className="uppercase font-bold mb-8">Tabletop and Splashback</h3>
+                <h3 className="lg:text-center font-bold mb-8">Tabletop and Splashback</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
-                    <button
-                      onClick={() => handleColorSelect({ benchtop: "agate-ash-s84408" })}
-                      className={`border-2 ${color.benchtop === "agate-ash-s84408" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
-                      <img src="/assets/Montreal-VFT10120507-1.jpg" alt="Agate Ash" className="w-20 h-20 object-cover" />
-                    </button>
+                    <div className="border-2 border-[#FFD700]">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.table_top_1_image}`}
+                        alt={selectedTheme.table_top_1_name}
+                        className="w-20 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=benchtop sample"
+                        }}
+                      />
+                    </div>
                     <div className="text-xs text-center mt-1">
-                      <p>Benchtops</p>
-                      <p>Agate Ash</p>
-                      <p>S84408</p>
+                      <p className="truncate max-w-[80px]" title={selectedTheme.table_top_1_name}>
+                        {selectedTheme.table_top_1_name}
+                      </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
-                    <button
-                      onClick={() => handleColorSelect({ splashback: "white-d049" })}
-                      className={`border-2 ${color.splashback === "white-d049" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
-                      <img src="/assets/White-0949-2.jpg" alt="White D049" className="w-20 h-20 object-cover" />
-                    </button>
+                    <div className="border-2 border-[#FFD700]">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.table_top_2_image}`}
+                        alt={selectedTheme.table_top_2_name}
+                        className="w-20 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=splashback sample"
+                        }}
+                      />
+                    </div>
                     <div className="text-xs text-center mt-1">
-                      <p>Splashback</p>
-                      <p>White D049</p>
+                      <p className="truncate max-w-[80px]" title={selectedTheme.table_top_2_name}>
+                        {selectedTheme.table_top_2_name}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Seating and Headboard */}
               <div>
-                <h3 className="uppercase font-bold mb-4">Seating and Headboard</h3>
+                <h3 className="lg:text-center font-bold mb-4">Seating and Headboard</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
-                    <button
-                      onClick={() => handleColorSelect({ fabric: "kama-cobblestone-s213-t5a" })}
-                      className={`border-2 ${color.fabric === "kama-cobblestone-s213-t5a" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
+                    <div className="border-2 border-[#FFD700]">
                       <img
-                        src="/assets/Kiama-Cobblestone-S213-75A-1-1.jpg"
-                        alt="Kama Cobblestone"
+                        src={`${baseUrl}/${selectedTheme.seating_1_image}`}
+                        alt={selectedTheme.seating_1_name}
                         className="w-20 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=fabric sample"
+                        }}
                       />
-                    </button>
+                    </div>
                     <div className="text-xs text-center mt-1">
-                      <p>Fabric</p>
-                      <p>Kama Cobblestone</p>
-                      <p>S213 T5A</p>
+                      <p className="truncate max-w-[80px]" title={selectedTheme.seating_1_name}>
+                        {selectedTheme.seating_1_name}
+                      </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-center">
-                    <button
-                      onClick={() => handleColorSelect({ leather: "taupe-0631-s" })}
-                      className={`border-2 ${color.leather === "taupe-0631-s" ? "border-[#FFD700]" : "border-transparent"}`}
-                    >
+                    <div className="border-2 border-[#FFD700]">
                       <img
-                        src="/assets/Montreal-VFT10120507-1.jpg"
-                        alt="Taupe 0631 S"
+                        src={`${baseUrl}/${selectedTheme.seating_2_image}`}
+                        alt={selectedTheme.seating_2_name}
                         className="w-20 h-20 object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=leather sample"
+                        }}
                       />
-                    </button>
+                    </div>
                     <div className="text-xs text-center mt-1">
-                      <p>Leather</p>
-                      <p>Taupe 0631 S</p>
+                      <p className="truncate max-w-[80px]" title={selectedTheme.seating_2_name}>
+                        {selectedTheme.seating_2_name}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -177,63 +401,133 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
       {/* Right Column - Preview */}
       <div className="w-full md:w-2/3 bg-[#1e1e1e] p-6 mt-[150px] md:mt-[80px]">
-        {color.theme ? (
+        {selectedTheme ? (
           <div className="space-y-6">
-            <div className="mt-[-130px] mb-6 flex justify-center">
+            <div className="mt-[-170px] mb-6 flex justify-center">
               <img
-                src="/assets/mainmodel.webp"
-                alt="Caravan Preview"
-                className="w-[250px] h-[200px] object-contain"
-              />
+                  src={`${baseUrl}/${formData.modelData?.outer_image}`}
+                  alt={`${selectedTheme.name} Interior Preview`}
+                  className="w-[350px] h-[300px] object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg?height=300&width=500&query=caravan interior"
+                  }}
+                />
             </div>
-            <h3 className="text-center text-white">Your New SRC-14</h3>
-
-
+            <h3 className="text-center text-white">Your New {formData.modelData?.name || "SRC-14"}</h3>
 
             <div className="aspect-video relative mb-6">
-              <img
-                src="/assets/car.png"
-                alt="Interior Preview"
-                className="w-full object-contain"
-              />
+              {themeWiseImage ? (
+                <img
+                  src={`${baseUrl}/${themeWiseImage.image}`}
+                  alt={`${selectedTheme.name} Interior Preview`}
+                  className="w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg?height=300&width=500&query=caravan interior"
+                  }}
+                />
+              ) : (
+                <img
+                  src="/placeholder.svg?height=300&width=500&query=caravan interior"
+                  alt="Interior Preview"
+                  className="w-full object-contain"
+                />
+              )}
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center">
-                <span>Flooring: Montreal VT1205007</span>
-                <div className="w-6 h-6 bg-[#d2b48c]"></div>
-              </div>
+              {selectedTheme && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.flooring_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.flooring_image}`}
+                        alt={selectedTheme.flooring_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=flooring sample"
+                        }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span>All Cabinetry: White D049</span>
-                <div className="w-6 h-6 bg-white"></div>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.cabinetry_1_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.cabinetry_1_image}`}
+                        alt={selectedTheme.cabinetry_1_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=cabinet sample"
+                        }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span>Benchtops: Agate Ash S84408</span>
-                <div className="w-6 h-6 bg-[#d2b48c]"></div>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.table_top_1_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.table_top_1_image}`}
+                        alt={selectedTheme.table_top_1_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=benchtop sample"
+                        }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span>Splashback: White D049</span>
-                <div className="w-6 h-6 bg-white"></div>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.table_top_2_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.table_top_2_image}`}
+                        alt={selectedTheme.table_top_2_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=splashback sample"
+                        }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span>Fabric: Kama Cobblestone S213 T5A</span>
-                <div className="w-6 h-6 bg-[#a9a9a9]"></div>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.seating_1_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.seating_1_image}`}
+                        alt={selectedTheme.seating_1_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=fabric sample"
+                        }}
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex justify-between items-center">
-                <span>Leather: Taupe 0631 S</span>
-                <div className="w-6 h-6 bg-[#c2b280]"></div>
-              </div>
+                  <div className="flex justify-between items-center">
+                    <span className="truncate max-w-[70%]">{selectedTheme.seating_2_name}</span>
+                    <div className="w-6 h-6 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={`${baseUrl}/${selectedTheme.seating_2_image}`}
+                        alt={selectedTheme.seating_2_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=leather sample"
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="mt-8 space-y-2">
               <div className="flex justify-between font-bold">
                 <span>Base Price</span>
-                <span>$79,900.00</span>
+                <span>${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}</span>
               </div>
 
               <div className="text-sm space-y-1 text-gray-300">
@@ -263,7 +557,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
               <div className="flex justify-between font-bold pt-4 border-t border-gray-700 mt-4">
                 <span>Estimated Total Build Price</span>
-                <span>$79,900.00</span>
+                <span>${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}</span>
               </div>
             </div>
           </div>

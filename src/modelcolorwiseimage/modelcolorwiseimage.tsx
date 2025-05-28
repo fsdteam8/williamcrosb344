@@ -8,17 +8,29 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
-import { ManufacturerForm } from "./components/manufacturer-form"
+import { ModelColorWiseImageForm } from "./components/model-color-wise-image-form"
 
-interface ManufacturerOption {
+interface VehicleModel {
   id: number
   name: string
-  price: string
-  vehicle_model_id: number | null
-  category_name: string
-  type: string
+}
+
+interface Color {
+  id: number
+  name: string
+}
+
+interface ModelColorWiseImage {
+  id: number
+  vehicle_model_id: number
+  color_1_id: number
+  color_2_id: number
+  image: string
   created_at: string
   updated_at: string
+  vehicle_model: VehicleModel
+  color1: Color
+  color2: Color
 }
 
 interface ApiResponse {
@@ -26,10 +38,22 @@ interface ApiResponse {
   message: string
   data: {
     current_page: number
-    data: ManufacturerOption[]
+    data: ModelColorWiseImage[]
     total: number
     per_page: number
     last_page: number
+    first_page_url: string
+    last_page_url: string
+    next_page_url: string | null
+    prev_page_url: string | null
+    path: string
+    from: number
+    to: number
+    links: Array<{
+      url: string | null
+      label: string
+      active: boolean
+    }>
   }
   current_page: number
   total_pages: number
@@ -37,9 +61,9 @@ interface ApiResponse {
   total: number
 }
 
-export default function Manufacturer() {
-  const [manufacturerOptions, setManufacturerOptions] = useState<ManufacturerOption[]>([])
-  const [filteredOptions, setFilteredOptions] = useState<ManufacturerOption[]>([])
+export default function ModelColorWiseImage() {
+  const [modelColorImages, setModelColorImages] = useState<ModelColorWiseImage[]>([])
+  const [filteredImages, setFilteredImages] = useState<ModelColorWiseImage[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedItems, setSelectedItems] = useState<number[]>([])
@@ -51,33 +75,31 @@ export default function Manufacturer() {
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [currentOption, setCurrentOption] = useState<ManufacturerOption | null>(null)
+  const [currentImage, setCurrentImage] = useState<ModelColorWiseImage | null>(null)
 
-  // Fetch manufacturer options
-  const fetchManufacturerOptions = async (page = 1) => {
+  // Fetch model color wise images
+  const fetchModelColorImages = async (page = 1) => {
     try {
       setLoading(true)
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options?page=${page}`)
+      const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image?page=${page}`)
       const data: ApiResponse = await response.json()
 
       if (data.success) {
-        // Filter only manufacturer options
-        const manufacturerData = data.data.data.filter((option) => option.type === "Manufacturer Options")
-        setManufacturerOptions(manufacturerData)
-        setFilteredOptions(manufacturerData)
+        setModelColorImages(data.data.data)
+        setFilteredImages(data.data.data)
         setTotalPages(data.total_pages)
-        setTotalItems(manufacturerData.length)
+        setTotalItems(data.total)
         setCurrentPage(data.current_page)
       }
     } catch (error) {
-      console.error("Error fetching manufacturer options:", error)
+      console.error("Error fetching model color wise images:", error)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchManufacturerOptions(currentPage)
+    fetchModelColorImages(currentPage)
   }, [currentPage])
 
   // Search functionality
@@ -85,21 +107,22 @@ export default function Manufacturer() {
     const query = e.target.value.toLowerCase()
     setSearchQuery(query)
 
-    const filtered = manufacturerOptions.filter(
-      (option) =>
-        option.name.toLowerCase().includes(query) ||
-        option.category_name.toLowerCase().includes(query) ||
-        option.price.includes(query),
+    const filtered = modelColorImages.filter(
+      (item) =>
+        item.vehicle_model.name.toLowerCase().includes(query) ||
+        item.color1.name.toLowerCase().includes(query) ||
+        item.color2.name.toLowerCase().includes(query) ||
+        item.id.toString().includes(query),
     )
-    setFilteredOptions(filtered)
+    setFilteredImages(filtered)
   }
 
   // Selection handlers
   const toggleSelectAll = () => {
-    if (selectedItems.length === filteredOptions.length) {
+    if (selectedItems.length === filteredImages.length) {
       setSelectedItems([])
     } else {
-      setSelectedItems(filteredOptions.map((option) => option.id))
+      setSelectedItems(filteredImages.map((item) => item.id))
     }
   }
 
@@ -107,96 +130,84 @@ export default function Manufacturer() {
     setSelectedItems((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
   }
 
-  // Add new manufacturer option
-  const handleAddOption = async (formData: any) => {
+  // Add new model color wise image
+  const handleAddImage = async (formData: FormData) => {
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/addtional-options", {
+      const response = await fetch("https://ben10.scaleupdevagency.com/api/model-color-wise-image", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          type: "Manufacturer Options",
-        }),
+        body: formData,
       })
 
       if (response.ok) {
         setIsAddModalOpen(false)
-        fetchManufacturerOptions(currentPage)
+        fetchModelColorImages(currentPage)
       }
     } catch (error) {
-      console.error("Error adding manufacturer option:", error)
+      console.error("Error adding model color wise image:", error)
     }
   }
 
-  // Edit manufacturer option
-  const openEditModal = (option: ManufacturerOption) => {
-    setCurrentOption(option)
+  // Edit model color wise image
+  const openEditModal = (item: ModelColorWiseImage) => {
+    setCurrentImage(item)
     setIsEditModalOpen(true)
   }
 
-  const handleEditOption = async (formData: any) => {
-    if (!currentOption) return
+  const handleEditImage = async (formData: FormData) => {
+    if (!currentImage) return
 
     try {
       const response = await fetch(
-        `https://ben10.scaleupdevagency.com/api/addtional-options/${currentOption.id}?_method=PUT`,
+        `https://ben10.scaleupdevagency.com/api/model-color-wise-image/${currentImage.id}?_method=PUT`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            ...formData,
-            type: "Manufacturer Options",
-          }),
+          body: formData,
         },
       )
 
       if (response.ok) {
         setIsEditModalOpen(false)
-        setCurrentOption(null)
-        fetchManufacturerOptions(currentPage)
+        setCurrentImage(null)
+        fetchModelColorImages(currentPage)
       }
     } catch (error) {
-      console.error("Error editing manufacturer option:", error)
+      console.error("Error editing model color wise image:", error)
     }
   }
 
-  // Delete single manufacturer option
-  const handleDeleteOption = async (id: number) => {
-    if (confirm("Are you sure you want to delete this manufacturer option?")) {
+  // Delete single model color wise image
+  const handleDeleteImage = async (id: number) => {
+    if (confirm("Are you sure you want to delete this model color wise image?")) {
       try {
-        const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
+        const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image/${id}`, {
           method: "DELETE",
         })
 
         if (response.ok) {
-          fetchManufacturerOptions(currentPage)
+          fetchModelColorImages(currentPage)
           setSelectedItems((prev) => prev.filter((item) => item !== id))
         }
       } catch (error) {
-        console.error("Error deleting manufacturer option:", error)
+        console.error("Error deleting model color wise image:", error)
       }
     }
   }
 
   // Bulk delete
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${selectedItems.length} manufacturer options?`)) {
+    if (confirm(`Are you sure you want to delete ${selectedItems.length} model color wise images?`)) {
       try {
         await Promise.all(
           selectedItems.map((id) =>
-            fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
+            fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image/${id}`, {
               method: "DELETE",
             }),
           ),
         )
         setSelectedItems([])
-        fetchManufacturerOptions(currentPage)
+        fetchModelColorImages(currentPage)
       } catch (error) {
-        console.error("Error bulk deleting manufacturer options:", error)
+        console.error("Error bulk deleting model color wise images:", error)
       }
     }
   }
@@ -205,11 +216,11 @@ export default function Manufacturer() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Manufacturer Options</h1>
-          <div className="text-sm text-muted-foreground">Dashboard / Manufacturer Options</div>
+          <h1 className="text-2xl font-bold">Model Color Wise Images</h1>
+          <div className="text-sm text-muted-foreground">Dashboard / Model Color Wise Images</div>
         </div>
         <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add New Option
+          <Plus className="mr-2 h-4 w-4" /> Add New Image
         </Button>
       </div>
 
@@ -217,7 +228,7 @@ export default function Manufacturer() {
         <div className="relative w-64">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search manufacturer options..."
+            placeholder="Search model color images..."
             className="pl-8"
             value={searchQuery}
             onChange={handleSearch}
@@ -236,15 +247,15 @@ export default function Manufacturer() {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedItems.length === filteredOptions.length && filteredOptions.length > 0}
+                  checked={selectedItems.length === filteredImages.length && filteredImages.length > 0}
                   onCheckedChange={toggleSelectAll}
                 />
               </TableHead>
               <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Vehicle Model ID</TableHead>
+              <TableHead>Vehicle Model</TableHead>
+              <TableHead>Color 1</TableHead>
+              <TableHead>Color 2</TableHead>
+              <TableHead>Image</TableHead>
               <TableHead>Created At</TableHead>
               <TableHead>Updated At</TableHead>
               <TableHead>Actions</TableHead>
@@ -259,28 +270,53 @@ export default function Manufacturer() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : filteredOptions.length === 0 ? (
+            ) : filteredImages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center">
-                  No manufacturer options found.
+                  No model color wise images found.
                 </TableCell>
               </TableRow>
             ) : (
-              filteredOptions.map((option) => (
-                <TableRow key={option.id}>
+              filteredImages.map((item) => (
+                <TableRow key={item.id}>
                   <TableCell>
                     <Checkbox
-                      checked={selectedItems.includes(option.id)}
-                      onCheckedChange={() => toggleSelectItem(option.id)}
+                      checked={selectedItems.includes(item.id)}
+                      onCheckedChange={() => toggleSelectItem(item.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-medium">{option.id}</TableCell>
-                  <TableCell>{option.name}</TableCell>
-                  <TableCell>${option.price}</TableCell>
-                  <TableCell>{option.category_name}</TableCell>
-                  <TableCell>{option.vehicle_model_id || "N/A"}</TableCell>
-                  <TableCell>{new Date(option.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(option.updated_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="font-medium">{item.id}</TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{item.vehicle_model.name}</p>
+                      <p className="text-sm text-muted-foreground">ID: {item.vehicle_model.id}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{item.color1.name}</p>
+                      <p className="text-sm text-muted-foreground">ID: {item.color1.id}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{item.color2.name}</p>
+                      <p className="text-sm text-muted-foreground">ID: {item.color2.id}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {item.image ? (
+                      <img
+                        src={`https://ben10.scaleupdevagency.com/${item.image}`}
+                        alt="Model Color Image"
+                        className="w-16 h-12 rounded object-cover border"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-sm">No image</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button
@@ -288,7 +324,7 @@ export default function Manufacturer() {
                         className="cursor-pointer"
                         size="icon"
                         title="Edit"
-                        onClick={() => openEditModal(option)}
+                        onClick={() => openEditModal(item)}
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -296,7 +332,7 @@ export default function Manufacturer() {
                         variant="ghost"
                         size="icon"
                         title="Delete"
-                        onClick={() => handleDeleteOption(option.id)}
+                        onClick={() => handleDeleteImage(item.id)}
                         className="hover:text-red-600 cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -313,7 +349,7 @@ export default function Manufacturer() {
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-muted-foreground">
           Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalItems)} of{" "}
-          {totalItems} manufacturer options
+          {totalItems} model color wise images
         </div>
         <div className="flex items-center gap-1">
           <Button
@@ -365,15 +401,15 @@ export default function Manufacturer() {
         </div>
       </div>
 
-      {/* Add Manufacturer Option Modal */}
-      <ManufacturerForm open={isAddModalOpen} onOpenChange={setIsAddModalOpen} onSubmit={handleAddOption} />
+      {/* Add Model Color Wise Image Modal */}
+      <ModelColorWiseImageForm open={isAddModalOpen} onOpenChange={setIsAddModalOpen} onSubmit={handleAddImage} />
 
-      {/* Edit Manufacturer Option Modal */}
-      <ManufacturerForm
+      {/* Edit Model Color Wise Image Modal */}
+      <ModelColorWiseImageForm
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
-        initialData={currentOption || undefined}
-        onSubmit={handleEditOption}
+        initialData={currentImage || undefined}
+        onSubmit={handleEditImage}
       />
     </div>
   )

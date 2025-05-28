@@ -1,17 +1,17 @@
 "use client"
 
-import React from "react"
-
+import type React from "react"
 import { useState, useEffect } from "react"
-import { Search, Filter, Plus, Eye, Pencil, Trash2, ChevronRight, ChevronLeft } from "lucide-react"
+import { Search, Plus, Eye, Pencil, Trash2, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { toast } from "react-hot-toast"
+import { toast } from "react-toastify"
 import { Card, CardContent } from "@/components/ui/card"
+import axios from "axios"
 import { ThemeForm } from "./compolents/AddEditeThemeForm"
+import { ThemeDetails } from "./compolents/ThemeDetails"
 
 interface Theme {
   id: number
@@ -21,44 +21,24 @@ interface Theme {
   flooring_image: string
   cabinetry_1_name: string
   cabinetry_1_image: string
+  cabinetry_2_name?: string
+  cabinetry_2_image?: string
   table_top_1_name: string
   table_top_1_image: string
+  table_top_2_name?: string
+  table_top_2_image?: string
   seating_1_name: string
   seating_1_image: string
+  seating_2_name?: string
+  seating_2_image?: string
   created_at: string
   updated_at: string
 }
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true }
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Error caught by ErrorBoundary:", error, errorInfo)
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-6 text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Something went wrong</h2>
-          <p className="text-muted-foreground">We're having trouble loading the themes.</p>
-          <Button className="mt-4" onClick={() => this.setState({ hasError: false })}>
-            Try Again
-          </Button>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
+// Create an Axios instance with default config
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
+})
 
 function ModelTheme() {
   const [themes, setThemes] = useState<Theme[]>([])
@@ -69,10 +49,24 @@ function ModelTheme() {
   const [selectedItems, setSelectedItems] = useState<number[]>([])
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null)
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
 
   const itemsPerPage = 10
+
+  const getAuthToken = () => {
+    return localStorage.getItem("authToken") || ""
+  }
+
+  // Add a request interceptor to include the token
+  api.interceptors.request.use((config) => {
+    const token = getAuthToken()
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  })
 
   useEffect(() => {
     fetchThemes()
@@ -81,27 +75,21 @@ function ModelTheme() {
   const fetchThemes = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/themes`)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch themes")
-      }
-
-      const data = await response.json()
+      const response = await api.get("/themes")
 
       // Ensure we're working with the correct data structure
-      const themesData = data.data.data
+      const themesData = response.data.data.data
       setThemes(Array.isArray(themesData) ? themesData : [])
-      setTotalItems(Array.isArray(themesData) ? themesData.length : 0)
+      setTotalItems(themesData.length || 0)
     } catch (error) {
       console.error("Error fetching themes:", error)
       setThemes([])
       setTotalItems(0)
+      toast.error("Failed to load themes")
     } finally {
       setLoading(false)
     }
   }
-
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
@@ -123,28 +111,18 @@ function ModelTheme() {
     }
   }
 
-  const handleAddTheme = async (formData: any) => {
+  const handleAddTheme = async (data: FormData) => {
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/themes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to create theme")
+      const config = {
+        headers: { "Content-Type": "multipart/form-data" },
       }
 
-      const data = await response.json()
+      const response = await api.post("/themes", data, config)
 
-      // Refresh the themes list
       fetchThemes()
       setIsAddModalOpen(false)
-
       toast.success("Theme created successfully")
-      return data
+      return response.data
     } catch (error) {
       console.error("Error creating theme:", error)
       toast.error("Failed to create theme")
@@ -152,30 +130,58 @@ function ModelTheme() {
     }
   }
 
-  const handleEditTheme = async (formData: any) => {
+  const handleEditTheme = async (formData: FormData) => {
     if (!currentTheme) return
 
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/themes/${currentTheme.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to update theme")
+      const config = {
+        headers: { "Content-Type": "multipart/form-data" },
       }
 
-      const data = await response.json()
+      // Create a new FormData and add all text fields
+      const submitData = new FormData()
 
-      // Refresh the themes list
+      // Always send all text fields (required and optional)
+      submitData.append("name", formData.get("name") || currentTheme.name)
+      submitData.append("flooring_name", formData.get("flooring_name") || currentTheme.flooring_name)
+      submitData.append("cabinetry_1_name", formData.get("cabinetry_1_name") || currentTheme.cabinetry_1_name)
+      submitData.append("table_top_1_name", formData.get("table_top_1_name") || currentTheme.table_top_1_name)
+      submitData.append("seating_1_name", formData.get("seating_1_name") || currentTheme.seating_1_name)
+
+      // Optional text fields - always send (empty string if not provided)
+      submitData.append("cabinetry_2_name", formData.get("cabinetry_2_name") || currentTheme.cabinetry_2_name || "")
+      submitData.append("table_top_2_name", formData.get("table_top_2_name") || currentTheme.table_top_2_name || "")
+      submitData.append("seating_2_name", formData.get("seating_2_name") || currentTheme.seating_2_name || "")
+
+      // Handle image fields - only send if new file is uploaded
+      const imageFields = [
+        "image",
+        "flooring_image",
+        "cabinetry_1_image",
+        "cabinetry_2_image",
+        "table_top_1_image",
+        "table_top_2_image",
+        "seating_1_image",
+        "seating_2_image",
+      ]
+
+      imageFields.forEach((field) => {
+        const file = formData.get(field)
+        // Only append image field if a new file was actually uploaded
+        if (file instanceof File && file.size > 0) {
+          submitData.append(field, file)
+        }
+        // Don't send anything for this field if no new file was uploaded
+      })
+
+      // Debug: Log what's being sent
+      console.log("Submitting text fields and new images only:", Object.fromEntries(submitData.entries()))
+
+      const response = await api.post(`/themes/${currentTheme.id}?_method=PUT`, submitData, config)
       fetchThemes()
       setIsEditModalOpen(false)
-
       toast.success("Theme updated successfully")
-      return data
+      return response.data
     } catch (error) {
       console.error("Error updating theme:", error)
       toast.error("Failed to update theme")
@@ -184,25 +190,22 @@ function ModelTheme() {
   }
 
   const handleDeleteTheme = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this theme?")) return
+    // if (!confirm("Are you sure you want to delete this theme?")) return
 
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/themes/${id}`, {
-        method: "DELETE",
-      })
+      await api.delete(`/themes/${id}`)
 
-      if (!response.ok) {
-        throw new Error("Failed to delete theme")
-      }
-
-      // Refresh the themes list
       fetchThemes()
-
       toast.success("Theme deleted successfully")
     } catch (error) {
       console.error("Error deleting theme:", error)
       toast.error("Failed to delete theme")
     }
+  }
+
+  const openViewModal = (theme: Theme) => {
+    setCurrentTheme(theme)
+    setIsViewModalOpen(true)
   }
 
   const openEditModal = (theme: Theme) => {
@@ -215,6 +218,11 @@ function ModelTheme() {
   const filteredThemes = Array.isArray(themes)
     ? themes.filter((theme) => theme.name.toLowerCase().includes(searchQuery.toLowerCase()))
     : []
+
+  const getImageUrl = (imagePath: string, fallbackText = "theme") => {
+    if (!imagePath) return `/placeholder.svg?height=60&width=60&query=${fallbackText}`
+    return `${import.meta.env.VITE_BACKEND_URL}/${imagePath}`
+  }
 
   return (
     <div className="p-6">
@@ -282,7 +290,7 @@ function ModelTheme() {
                     <TableCell>
                       <div className="h-12 w-12 rounded overflow-hidden border">
                         <img
-                          src={theme.image || `/placeholder.svg?height=60&width=60&query=${theme.name}`}
+                          src={getImageUrl(theme.image, theme.name) || "/placeholder.svg"}
                           alt={theme.name}
                           className="h-full w-full object-cover"
                         />
@@ -295,7 +303,7 @@ function ModelTheme() {
                     <TableCell>{theme.seating_1_name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" title="View">
+                        <Button variant="ghost" size="icon" title="View" onClick={() => openViewModal(theme)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" title="Edit" onClick={() => openEditModal(theme)}>
@@ -332,11 +340,14 @@ function ModelTheme() {
                 <CardContent className="p-0">
                   <div className="relative">
                     <img
-                      src={theme.image || `/placeholder.svg?height=200&width=400&query=${theme.name}`}
+                      src={getImageUrl(theme.image, theme.name) || "/placeholder.svg"}
                       alt={theme.name}
                       className="w-full h-48 object-cover"
                     />
                     <div className="absolute top-2 right-2 flex gap-1">
+                      <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => openViewModal(theme)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => openEditModal(theme)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -390,7 +401,6 @@ function ModelTheme() {
           </Button>
 
           {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            // Show pages around current page
             let pageNum = i + 1
             if (totalPages > 5 && currentPage > 3) {
               pageNum = currentPage - 3 + i
@@ -440,16 +450,11 @@ function ModelTheme() {
         initialData={currentTheme || undefined}
         onSubmit={handleEditTheme}
       />
+
+      {/* View Theme Modal */}
+      <ThemeDetails open={isViewModalOpen} onOpenChange={setIsViewModalOpen} themeId={currentTheme?.id} />
     </div>
   )
 }
 
-function ModelThemeWithBoundary() {
-  return (
-    <ErrorBoundary>
-      <ModelTheme />
-    </ErrorBoundary>
-  )
-}
-
-export default ModelThemeWithBoundary
+export default ModelTheme

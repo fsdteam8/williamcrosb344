@@ -9,53 +9,7 @@ import ManufacturerOptions from "./steps/manufacturer-options"
 import VanariOptions from "./steps/vanari-options"
 import SaveAndShare from "./steps/save-and-share"
 import { Loader2 } from "lucide-react"
-
-// Define types based on the API responses
-interface ModelCategory {
-  id: number
-  name: string
-  vehicle_models: {
-    id: number
-    category_id: number
-    name: string
-  }[]
-}
-
-interface VehicleModel {
-  id: number
-  name: string
-  sleep_person: string
-  description: string
-  inner_image: string
-  category_id: number
-  base_price: string
-  price: string
-  categories: any
-}
-
-interface Color {
-  id: number
-  name: string
-  code: string | null
-  image: string | null
-  status: string
-}
-
-interface FormData {
-  model: string
-  modelData: VehicleModel | null
-  color: any
-  externalOptions: any
-  manufacturerOptions: any
-  vanariOptions: any
-  contactInfo: {
-    firstName: string
-    lastName: string
-    email: string
-    phone: string
-    postalCode: string
-  }
-}
+import type { ModelCategory, VehicleModel, Color, FormData } from "@/lib/types"
 
 export default function MultiStepForm() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -85,20 +39,116 @@ export default function MultiStepForm() {
       try {
         setLoading(true)
 
-        // Fetch model categories
-        const categoriesResponse = await fetch("https://ben10.scaleupdevagency.com/api/frontend-models-category")
-        const categoriesData = await categoriesResponse.json()
-        setModelCategories(categoriesData)
+        // Use direct API URL
+        const baseUrl = "https://ben10.scaleupdevagency.com"
 
-        // Fetch models
-        const modelsResponse = await fetch("https://ben10.scaleupdevagency.com/api/models")
-        const modelsData = await modelsResponse.json()
-        setVehicleModels(modelsData.data.data)
+        // Fetch model categories with error handling
+        try {
+          const categoriesResponse = await fetch(`${baseUrl}/api/frontend-models-category`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
 
-        // Fetch colors
-        const colorsResponse = await fetch("https://ben10.scaleupdevagency.com/api/colors")
-        const colorsData = await colorsResponse.json()
-        setColors(colorsData.data.data)
+          if (categoriesResponse.ok) {
+            const categoriesData = await categoriesResponse.json()
+            setModelCategories(categoriesData || [])
+          } else {
+            console.warn("Failed to fetch categories, using fallback data")
+            setModelCategories([
+              {
+                id: 6,
+                name: "SRC",
+                vehicle_models: [{ id: 13, category_id: 6, name: "SRC-14" }],
+              },
+            ])
+          }
+        } catch (error) {
+          console.warn("Categories API error:", error)
+          setModelCategories([
+            {
+              id: 6,
+              name: "SRC",
+              vehicle_models: [{ id: 13, category_id: 6, name: "SRC-14" }],
+            },
+          ])
+        }
+
+        // Fetch models with error handling - UPDATED to match the actual API response structure
+        try {
+          const modelsResponse = await fetch(`${baseUrl}/api/models`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+
+          if (modelsResponse.ok) {
+            const modelsData = await modelsResponse.json()
+            // The data is directly in data array, not in data.data
+            setVehicleModels(modelsData.data || [])
+          } else {
+            console.warn("Failed to fetch models, using fallback data")
+            setVehicleModels([
+              {
+                id: 13,
+                name: "SRC-14",
+                sleep_person: "2-3",
+                description:
+                  "Welcome to the world of the SRC-14, the ultimate small caravan with ensuite that doesn't sacrifice on comfort or functionality.",
+                inner_image: "uploads/1748403721_SRC14-Snowy-River-Caravans-LRV231153-Theme-3.png",
+                category_id: 6,
+                base_price: "79500.00",
+                price: "79500.00",
+                category: {
+                  id: 6,
+                  name: "SRC",
+                },
+              },
+            ])
+          }
+        } catch (error) {
+          console.warn("Models API error:", error)
+          setVehicleModels([
+            {
+              id: 13,
+              name: "SRC-14",
+              sleep_person: "2-3",
+              description:
+                "Welcome to the world of the SRC-14, the ultimate small caravan with ensuite that doesn't sacrifice on comfort or functionality.",
+              inner_image: "uploads/1748403721_SRC14-Snowy-River-Caravans-LRV231153-Theme-3.png",
+              category_id: 6,
+              base_price: "79500.00",
+              price: "79500.00",
+              category: {
+                id: 6,
+                name: "SRC",
+              },
+            },
+          ])
+        }
+
+        // Fetch colors with error handling
+        try {
+          const colorsResponse = await fetch(`${baseUrl}/api/colors`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+
+          if (colorsResponse.ok) {
+            const colorsData = await colorsResponse.json()
+            setColors(colorsData.data?.data || [])
+          } else {
+            console.warn("Failed to fetch colors, using fallback data")
+            setColors([])
+          }
+        } catch (error) {
+          console.warn("Colors API error:", error)
+          setColors([])
+        }
 
         setLoading(false)
       } catch (error) {
@@ -210,8 +260,9 @@ export default function MultiStepForm() {
           <div className="flex justify-between mt-8">
             <button
               onClick={handlePrevious}
-              className={`px-6 py-2 uppercase text-sm font-bold ${currentStep === 1 ? "bg-[#FFE4A8]" : "bg-[#FFE4A8] hover:bg-[#FFE4A8]/80"
-                }`}
+              className={`px-6 py-2 uppercase text-sm font-bold ${
+                currentStep === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-[#FFE4A8] hover:bg-[#FFE4A8]/80"
+              }`}
               disabled={currentStep === 1}
             >
               Previous

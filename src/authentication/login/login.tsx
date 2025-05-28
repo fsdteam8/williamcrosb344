@@ -31,7 +31,7 @@ export default function Login() {
 
     try {
       const response = await axios.post(
-        "https://ben10.scaleupdevagency.com/api/login",
+        `${import.meta.env.VITE_BACKEND_URL}/api/login`,
         {
           email: formData.email,
           password: formData.password
@@ -59,7 +59,7 @@ export default function Login() {
       navigate("/dashboard")
     } catch (error) {
       console.error("Login error:", error)
-      
+
       let errorMessage = "Login Failed"
       if (axios.isAxiosError(error)) {
         errorMessage = error.response?.data?.message || error.message

@@ -59,10 +59,12 @@ export default function Manufacturer() {
       setLoading(true)
       const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options?page=${page}`)
       const data: ApiResponse = await response.json()
+      console.log("API Response:", data.data.data)
 
       if (data.success) {
         // Filter only manufacturer options
         const manufacturerData = data.data.data.filter((option) => option.type === "Manufacturer Options")
+        console.log("Manufacturer Options:", manufacturerData)
         setManufacturerOptions(manufacturerData)
         setFilteredOptions(manufacturerData)
         setTotalPages(data.total_pages)

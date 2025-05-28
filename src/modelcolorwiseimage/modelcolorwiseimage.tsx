@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { ModelColorWiseImageForm } from "./components/model-color-wise-image-form"
+import { toast } from "react-toastify"
 
 interface VehicleModel {
   id: number
@@ -77,11 +77,33 @@ export default function ModelColorWiseImage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [currentImage, setCurrentImage] = useState<ModelColorWiseImage | null>(null)
 
+  const getAuthToken = () => {
+    return localStorage.getItem("authToken") || ""
+  }
+
   // Fetch model color wise images
   const fetchModelColorImages = async (page = 1) => {
     try {
       setLoading(true)
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image?page=${page}`)
+      const token = getAuthToken()
+
+      const requestOptions: RequestInit = {
+        method: "GET",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+          "Content-Type": "application/json",
+        },
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image?page=${page}`,
+        requestOptions,
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data: ApiResponse = await response.json()
 
       if (data.success) {
@@ -90,9 +112,12 @@ export default function ModelColorWiseImage() {
         setTotalPages(data.total_pages)
         setTotalItems(data.total)
         setCurrentPage(data.current_page)
+      } else {
+        throw new Error(data.message || "Failed to fetch model color wise images")
       }
     } catch (error) {
       console.error("Error fetching model color wise images:", error)
+      toast.error("Failed to fetch model color wise images. Please try again later.")
     } finally {
       setLoading(false)
     }
@@ -133,17 +158,46 @@ export default function ModelColorWiseImage() {
   // Add new model color wise image
   const handleAddImage = async (formData: FormData) => {
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/model-color-wise-image", {
-        method: "POST",
-        body: formData,
-      })
+      const token = getAuthToken()
+      const isFormData = formData instanceof FormData
 
-      if (response.ok) {
+      const requestOptions: RequestInit = {
+        method: "POST",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(!isFormData && { "Content-Type": "application/json" }),
+        },
+        body: isFormData ? formData : JSON.stringify(formData),
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image`, requestOptions)
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`
+        try {
+          const contentType = response.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.message || errorMessage
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError)
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+
+      if (result && result.success) {
         setIsAddModalOpen(false)
         fetchModelColorImages(currentPage)
+        toast.success("Model color wise image added successfully")
+      } else {
+        throw new Error((result && result.message) || "Failed to add model color wise image")
       }
     } catch (error) {
       console.error("Error adding model color wise image:", error)
+      toast.error("Failed to add model color wise image. Please try again later.")
     }
   }
 
@@ -157,58 +211,155 @@ export default function ModelColorWiseImage() {
     if (!currentImage) return
 
     try {
-      const response = await fetch(
-        `https://ben10.scaleupdevagency.com/api/model-color-wise-image/${currentImage.id}?_method=PUT`,
-        {
-          method: "POST",
-          body: formData,
+      const token = getAuthToken()
+      const isFormData = formData instanceof FormData
+
+      // Add _method=PUT for Laravel method spoofing
+      if (isFormData) {
+        formData.append("_method", "PUT")
+      }
+
+      const requestOptions: RequestInit = {
+        method: "POST", // Laravel requires POST with _method=PUT for file uploads
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(!isFormData && { "Content-Type": "application/json" }),
         },
+        body: isFormData
+          ? formData
+          : JSON.stringify({
+              ...(Object.fromEntries((formData as any).entries())),
+              _method: "PUT",
+            }),
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image/${currentImage.id}?_method=PUT`,
+        requestOptions,
       )
 
-      if (response.ok) {
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`
+        try {
+          const contentType = response.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.message || errorMessage
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError)
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+
+      if (result && result.success) {
         setIsEditModalOpen(false)
         setCurrentImage(null)
         fetchModelColorImages(currentPage)
+        toast.success("Model color wise image updated successfully")
+      } else {
+        throw new Error((result && result.message) || "Failed to update model color wise image")
       }
     } catch (error) {
       console.error("Error editing model color wise image:", error)
+      toast.success("Failed to update model color wise image. Please try again later.")
     }
   }
 
   // Delete single model color wise image
   const handleDeleteImage = async (id: number) => {
-    if (confirm("Are you sure you want to delete this model color wise image?")) {
-      try {
-        const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image/${id}`, {
-          method: "DELETE",
-        })
+    if (!confirm("Are you sure you want to delete this model color wise image?")) {
+      return
+    }
 
-        if (response.ok) {
-          fetchModelColorImages(currentPage)
-          setSelectedItems((prev) => prev.filter((item) => item !== id))
-        }
-      } catch (error) {
-        console.error("Error deleting model color wise image:", error)
+    try {
+      const token = getAuthToken()
+
+      const requestOptions: RequestInit = {
+        method: "DELETE",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+          "Content-Type": "application/json",
+        },
       }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image/${id}`,
+        requestOptions,
+      )
+
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`
+        try {
+          const contentType = response.headers.get("content-type")
+          if (contentType && contentType.includes("application/json")) {
+            const errorData = await response.json()
+            errorMessage = errorData.message || errorMessage
+          }
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError)
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+
+      if (result && result.success) {
+        fetchModelColorImages(currentPage)
+        setSelectedItems((prev) => prev.filter((item) => item !== id))
+        toast.success("Model color wise image deleted successfully")
+      } else {
+        throw new Error((result && result.message) || "Failed to delete model color wise image")
+      }
+    } catch (error) {
+      console.error("Error deleting model color wise image:", error)
+      toast.error("Failed to delete model color wise image. Please try again later.") 
     }
   }
 
   // Bulk delete
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${selectedItems.length} model color wise images?`)) {
-      try {
-        await Promise.all(
-          selectedItems.map((id) =>
-            fetch(`https://ben10.scaleupdevagency.com/api/model-color-wise-image/${id}`, {
-              method: "DELETE",
-            }),
-          ),
+    if (!confirm(`Are you sure you want to delete ${selectedItems.length} model color wise images?`)) {
+      return
+    }
+
+    try {
+      const token = getAuthToken()
+
+      const deletePromises = selectedItems.map(async (id) => {
+        const requestOptions: RequestInit = {
+          method: "DELETE",
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "Content-Type": "application/json",
+          },
+        }
+
+        const response = await fetch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image/${id}`,
+          requestOptions,
         )
-        setSelectedItems([])
-        fetchModelColorImages(currentPage)
-      } catch (error) {
-        console.error("Error bulk deleting model color wise images:", error)
-      }
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(`Failed to delete image ${id}: ${errorData.message}`)
+        }
+
+        return response.json()
+      })
+
+      await Promise.all(deletePromises)
+
+      setSelectedItems([])
+      fetchModelColorImages(currentPage)
+      toast.success("Model color wise images deleted successfully")
+    } catch (error) {
+      console.error("Error bulk deleting model color wise images:", error)
+      toast.error("Failed to delete model color wise images. Please try again later.")
+      // Refresh the list even if some deletions failed
+      fetchModelColorImages(currentPage)
     }
   }
 
@@ -257,7 +408,6 @@ export default function ModelColorWiseImage() {
               <TableHead>Color 2</TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Created At</TableHead>
-              <TableHead>Updated At</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -265,14 +415,14 @@ export default function ModelColorWiseImage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={`loading-${index}`}>
-                  <TableCell colSpan={9} className="h-16 text-center">
+                  <TableCell colSpan={8} className="h-16 text-center">
                     <div className="h-6 w-full animate-pulse bg-muted rounded"></div>
                   </TableCell>
                 </TableRow>
               ))
             ) : filteredImages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center">
                   No model color wise images found.
                 </TableCell>
               </TableRow>
@@ -293,21 +443,25 @@ export default function ModelColorWiseImage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{item.color1.name}</p>
-                      <p className="text-sm text-muted-foreground">ID: {item.color1.id}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-medium">{item.color1.name}</p>
+                        <p className="text-sm text-muted-foreground">ID: {item.color1.id}</p>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <p className="font-medium">{item.color2.name}</p>
-                      <p className="text-sm text-muted-foreground">ID: {item.color2.id}</p>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-medium">{item.color2.name}</p>
+                        <p className="text-sm text-muted-foreground">ID: {item.color2.id}</p>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     {item.image ? (
                       <img
-                        src={`https://ben10.scaleupdevagency.com/${item.image}`}
+                        src={`${import.meta.env.VITE_BACKEND_URL}/${item.image}`}
                         alt="Model Color Image"
                         className="w-16 h-12 rounded object-cover border"
                       />
@@ -316,16 +470,9 @@ export default function ModelColorWiseImage() {
                     )}
                   </TableCell>
                   <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(item.updated_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        className="cursor-pointer"
-                        size="icon"
-                        title="Edit"
-                        onClick={() => openEditModal(item)}
-                      >
+                      <Button variant="ghost" size="icon" title="Edit" onClick={() => openEditModal(item)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
@@ -333,7 +480,7 @@ export default function ModelColorWiseImage() {
                         size="icon"
                         title="Delete"
                         onClick={() => handleDeleteImage(item.id)}
-                        className="hover:text-red-600 cursor-pointer"
+                        className="hover:text-red-600"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -1,17 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom" 
 import StepBar from "./step-bar"
 import ModelSelection from "./steps/model-selection"
 import ColorSelection from "./steps/color-selection"
 import ExternalOptions from "./steps/external-options"
 import ManufacturerOptions from "./steps/manufacturer-options"
-import VanariOptions from "./steps/vanari-options"
 import SaveAndShare from "./steps/save-and-share"
 import { Loader2 } from "lucide-react"
 import type { ModelCategory, VehicleModel, Color, FormData } from "@/lib/types"
+import VanariOptions from "./steps/vanari-options"
 
 export default function MultiStepForm() {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [loading, setLoading] = useState(true)
   const [modelCategories, setModelCategories] = useState<ModelCategory[]>([])
@@ -32,6 +34,10 @@ export default function MultiStepForm() {
       postalCode: "",
     },
   })
+
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [orderResponse, setOrderResponse] = useState<any>(null)
 
   // Fetch data from APIs
   useEffect(() => {
@@ -186,9 +192,114 @@ export default function MultiStepForm() {
     if (currentStep < 6) {
       setCurrentStep(currentStep + 1)
     } else {
-      // Submit form
-      console.log("Final form data:", formData)
+      // Show save modal instead of direct save
+      setShowSaveModal(true)
     }
+  }
+
+  const handleSaveAndView = async () => {
+    try {
+      setSaving(true)
+
+      // Calculate pricing
+      const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
+
+      const calculateManufacturerOptionsPrice = () => {
+        const total = 0
+        if (formData.manufacturerOptions && typeof formData.manufacturerOptions === "object") {
+          // Add manufacturer options price calculation logic here
+        }
+        return total
+      }
+
+      const calculateVanariOptionsPrice = () => {
+        const total = 0
+        if (formData.vanariOptions && typeof formData.vanariOptions === "object") {
+          // Add vanari options price calculation logic here
+        }
+        return total
+      }
+
+      // Prepare order data
+      const orderData = {
+        // Customer Information
+        first_name: formData.contactInfo?.firstName || "",
+        last_name: formData.contactInfo?.lastName || "",
+        email: formData.contactInfo?.email || "",
+        phone: formData.contactInfo?.phone || "",
+        postal_code: formData.contactInfo?.postalCode || "",
+
+        // Model Information
+        vehicle_model_id: formData.modelData?.id || null,
+        model_name: formData.modelData?.name || "",
+
+        // Theme/Color Information
+        theme_id: formData.color?.themeId || null,
+        theme_name: formData.color?.themeName || "",
+
+        // External Colors
+        base_color_id: formData.externalOptions?.baseColorId || null,
+        base_color_name: formData.externalOptions?.baseColor || "",
+        decal_color_id: formData.externalOptions?.decalColorId || null,
+        decal_color_name: formData.externalOptions?.decalColor || "",
+
+        // Selected Options
+        manufacturer_options: Object.keys(formData.manufacturerOptions || {})
+          .filter((optionId) => formData.manufacturerOptions[optionId])
+          .map((optionId) => Number.parseInt(optionId)),
+
+        vanari_options: Object.keys(formData.vanariOptions || {})
+          .filter((optionId) => formData.vanariOptions[optionId])
+          .map((optionId) => Number.parseInt(optionId)),
+
+        // Pricing
+        base_price: basePrice,
+        manufacturer_options_price: calculateManufacturerOptionsPrice(),
+        vanari_options_price: calculateVanariOptionsPrice(),
+        total_price: basePrice + calculateManufacturerOptionsPrice() + calculateVanariOptionsPrice(),
+
+        // Additional metadata
+        configuration_data: JSON.stringify(formData),
+      }
+
+      console.log("Sending order data:", orderData)
+
+      // Post to API
+      const response = await fetch("https://ben10.scaleupdevagency.com/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log("Order saved successfully:", result)
+        setOrderResponse(result)
+        setShowSaveModal(false)
+
+        // Navigate to order page with configuration data
+        const configParam = encodeURIComponent(JSON.stringify(formData))
+         navigate(`/order?config=${configParam}`)  // Changed this line
+      } else {
+        const errorData = await response.json()
+        console.error("Failed to save order:", errorData)
+        alert("Failed to save configuration. Please try again.")
+      }
+    } catch (error) {
+      console.error("Error saving order:", error)
+      alert("An error occurred while saving. Please try again.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleInputChange = (field: string, value: string) => {
+    updateFormData("contactInfo", {
+      ...formData.contactInfo,
+      [field]: value,
+    })
   }
 
   const handlePrevious = () => {
@@ -269,9 +380,9 @@ export default function MultiStepForm() {
             </button>
             <button
               onClick={handleNext}
-              className="px-6 py-2 bg-[#FFE4A8] hover:bg-[#FFE4A8]/80 uppercase text-sm font-bold"
+              className="px-6 py-2 bg-[#FFE4A8] hover:bg-[#FFE4A8]/80 uppercase text-sm font-bold text-black"
             >
-              {currentStep === 6 ? "Save & Share" : "Next"}
+              {currentStep === 6 ? "Save & View" : "Next"}
             </button>
           </div>
         </main>
@@ -280,6 +391,100 @@ export default function MultiStepForm() {
           Specifications and pricing may be subject to change without notice at the discretion of the Manufacturer &
           Dealer. Floorplans and imagery are for illustrative purposes only. Actual caravans may differ.
         </footer>
+
+        {/* Save Modal */}
+        {showSaveModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-black border border-gray-700 p-8 rounded-lg max-w-md w-full mx-4">
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold mb-6 text-white">Save & Share</h2>
+
+                <div className="bg-[#1A1A1A] p-6 space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="firstName" className="block text-sm text-white">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      value={formData.contactInfo?.firstName || ""}
+                      onChange={(e) => handleInputChange("firstName", e.target.value)}
+                      className="w-full p-2 bg-white text-black border border-gray-700 focus:border-yellow-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="lastName" className="block text-sm text-white">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      value={formData.contactInfo?.lastName || ""}
+                      onChange={(e) => handleInputChange("lastName", e.target.value)}
+                      className="w-full p-2 bg-white text-black border border-gray-700 focus:border-yellow-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm text-white">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={formData.contactInfo?.email || ""}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      className="w-full p-2 bg-white text-black border border-gray-700 focus:border-yellow-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="block text-sm text-white">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      value={formData.contactInfo?.phone || ""}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      className="w-full p-2 bg-white text-black border border-gray-700 focus:border-yellow-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="postalCode" className="block text-sm text-white">
+                      Postal Code
+                    </label>
+                    <input
+                      type="text"
+                      id="postalCode"
+                      value={formData.contactInfo?.postalCode || ""}
+                      onChange={(e) => handleInputChange("postalCode", e.target.value)}
+                      className="w-full p-2 bg-white text-black border border-gray-700 focus:border-yellow-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAndView}
+                    disabled={saving}
+                    className="flex-1 bg-[#FFE4A8] hover:bg-[#FFE4A8]/80 text-black font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? "Saving..." : "Save & View Configuration"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

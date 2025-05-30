@@ -315,7 +315,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
               {/* Tabletop and Splashback */}
               <div>
-                <h3 className="lg:text-center font-bold mb-8">Tabletop and Splashback</h3>
+                <h3 className="uppercase font-bold mb-8">Tabletop and Splashback</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
                     <div className="border-2 border-[#FFD700]">
@@ -356,7 +356,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
               {/* Seating and Headboard */}
               <div>
-                <h3 className="lg:text-center font-bold mb-4">Seating and Headboard</h3>
+                <h3 className="uppercase font-bold mb-4">Seating and Headboard</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
                     <div className="border-2 border-[#FFD700]">
@@ -405,13 +405,13 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
           <div className="space-y-6">
             <div className="mt-[-170px] mb-6 flex justify-center">
               <img
-                  src={`${baseUrl}/${formData.modelData?.outer_image}`}
-                  alt={`${selectedTheme.name} Interior Preview`}
-                  className="w-[350px] h-[300px] object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg?height=300&width=500&query=caravan interior"
-                  }}
-                />
+                src={`${baseUrl}/${formData.modelData?.outer_image}`}
+                alt={`${formData.modelData?.name} Interior Preview`}
+                className="w-[350px] h-[300px] object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg?height=300&width=350"
+                }}
+              />
             </div>
             <h3 className="text-center text-white">Your New {formData.modelData?.name || "SRC-14"}</h3>
 

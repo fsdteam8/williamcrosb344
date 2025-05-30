@@ -7,7 +7,7 @@ interface StepBarProps {
   onStepChange: (step: number) => void
 }
 
-export default function StepBar({ currentStep, onStepChange }: StepBarProps) {
+export default function StepBar({ currentStep }: StepBarProps) {
   const steps = [
     { number: 1, title: "SELECT MODEL & FLOORPLAN" },
     { number: 2, title: "SELECT COLOUR" },
@@ -23,7 +23,6 @@ export default function StepBar({ currentStep, onStepChange }: StepBarProps) {
         {steps.map((step, index) => (
           <div key={step.number} className="flex items-center">
             <button
-              onClick={() => onStepChange(step.number)}
               className={cn(
                 "flex flex-col gap-2 lg:w-[151px] lg:h-[129px] items-center justify-center text-center transition-colors lg:min-w-[100px] bg-[#1E1E1E] rounded-md p-[2px] lg:p-4",
                 currentStep === step.number ? " bg-[#FFE4A8]" : "text-[#999999] hover:text-gray-300 ",

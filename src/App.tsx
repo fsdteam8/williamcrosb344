@@ -22,6 +22,7 @@ import Submission from "./Submission/Submission";
 import ModelCategory from "./ModelCategory/ModelCategory";
 import ModelColorWiseImage from "./modelcolorwiseimage/modelcolorwiseimage";
 import ModelThemeWiseImage from "./modelthemewiseimage/modelthemewiseimage";
+import OrderPage from "./order/order";
 
 // Route paths as constants for maintainability
 const ROUTE_PATHS = {
@@ -55,6 +56,7 @@ function App() {
       <Route>
         {/* Public routes */}
         <Route index path={ROUTE_PATHS.HOME} element={<Home />} />
+        <Route index path="/orderpage" element={<OrderPage />} />
         <Route path={ROUTE_PATHS.LOGIN} element={<Login />} />
         <Route path={ROUTE_PATHS.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={ROUTE_PATHS.RESET_PASSWORD} element={<ResetPassword />} />

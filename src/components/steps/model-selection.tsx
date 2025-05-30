@@ -1,33 +1,11 @@
 "use client"
 
-import { useState } from "react"
-
-// Define types based on the API responses
-interface ModelCategory {
-  id: number
-  name: string
-  vehicle_models: {
-    id: number
-    category_id: number
-    name: string
-  }[]
-}
-
-interface VehicleModel {
-  id: number
-  name: string
-  sleep_person: string
-  description: string
-  inner_image: string
-  category_id: number
-  base_price: string
-  price: string
-  categories: any
-}
+import { useState, useEffect } from "react"
+import type { ModelCategory, VehicleModel, FormData } from "@/lib/types"
 
 interface ModelSelectionProps {
   formData: any
-  updateFormData: (field: string, value: any) => void
+  updateFormData: (field: keyof FormData, value: any) => void
   modelCategories: ModelCategory[]
   vehicleModels: VehicleModel[]
 }
@@ -39,6 +17,15 @@ export default function ModelSelection({
   vehicleModels,
 }: ModelSelectionProps) {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+
+  // Add this useEffect after the existing useState declarations
+  useEffect(() => {
+    // Auto-select first model if none is selected and models are available
+    if (!formData.model && vehicleModels.length > 0) {
+      const firstModel = vehicleModels[0]
+      handleModelSelect(firstModel)
+    }
+  }, [vehicleModels, formData.model])
 
   const handleCategorySelect = (categoryId: number) => {
     setSelectedCategory(categoryId)
@@ -95,34 +82,41 @@ export default function ModelSelection({
             <div className="space-y-4">
               <div className="aspect-video relative">
                 <img
-                  src={`${import.meta.env.VITE_BACKEND_URL}/${selectedModel.inner_image}`}
+                  src={
+                    selectedModel.inner_image
+                      ? `https://ben10.scaleupdevagency.com/${selectedModel.inner_image}`
+                      : "/placeholder.svg?height=300&width=500"
+                  }
                   alt={selectedModel.name}
                   className="object-contain w-full h-full"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg?height=300&width=500"
+                  }}
                 />
               </div>
 
               <div className="grid grid-cols-4 gap-4 mt-8">
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/assets/ref-icon.svg" alt="Refrigerator" width={40} height={40} />
+                    <img src="/placeholder.svg?height=40&width=40" alt="Refrigerator" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Refrigerator</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/assets/sleeps-icon.svg" alt="Sleeps" width={40} height={40} />
+                    <img src="/placeholder.svg?height=40&width=40" alt="Sleeps" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Sleeps {selectedModel.sleep_person}</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/assets/shower-icon.svg" alt="Shower" width={40} height={40} />
+                    <img src="/placeholder.svg?height=40&width=40" alt="Shower" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Shower</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/assets/toilet.svg" alt="Toilet" width={40} height={40} />
+                    <img src="/placeholder.svg?height=40&width=40" alt="Toilet" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Toilet</span>
                 </div>

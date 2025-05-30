@@ -1,6 +1,6 @@
 export interface StepProps {
   formData: any
-  updateFormData: (field: string, value: any) => void
+  updateFormData: (field: keyof FormData, value: any) => void
   colors?: any[]
 }
 
@@ -100,6 +100,24 @@ interface ColorSelectionData {
   selectedTheme?: Theme
 }
 
-
-
-
+export interface ModelColorWiseImage {
+  id: number
+  vehicle_model_id: number
+  color_1_id: number
+  color_2_id: number
+  image: string
+  created_at: string
+  updated_at: string
+  vehicle_model: {
+    id: number
+    name: string
+  }
+  color1: {
+    id: number
+    name: string
+  }
+  color2: {
+    id: number
+    name: string
+  }
+}

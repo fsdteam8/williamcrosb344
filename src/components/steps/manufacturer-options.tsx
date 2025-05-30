@@ -1,115 +1,173 @@
 "use client"
 
 import type { StepProps } from "@/lib/types"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 
 interface ManufacturerOptionsData {
-  [category: string]: string | null
+  [optionId: string]: boolean
+}
+
+interface AdditionalOption {
+  id: number
+  name: string
+  price: string
+  vehicle_model_id: number
+  category_name: string
+  type: string
+  created_at: string
+  updated_at: string
 }
 
 export default function ManufacturerOptions({ formData, updateFormData }: StepProps) {
-  const [openCategory, setOpenCategory] = useState<string | null>("plumbing")
+  const [openCategory, setOpenCategory] = useState<string | null>(null)
+  const [options, setOptions] = useState<AdditionalOption[]>([])
+  const [loading, setLoading] = useState(true)
   const optionsContainerRef = useRef<HTMLDivElement>(null)
 
-  const categories = [
-    { id: "chassis", name: "CHASSIS OPTIONS" },
-    { id: "external", name: "EXTERNAL OPTIONS" },
-    { id: "appliances", name: "APPLIANCES OPTIONS" },
-    { id: "electrical", name: "ELECTRICAL OPTIONS" },
-    { id: "plumbing", name: "PLUMBING OPTIONS" },
-    { id: "internal", name: "INTERNAL OPTIONS" },
-  ]
+  // Fetch manufacturer options from API
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        setLoading(true)
+        const baseUrl = "https://ben10.scaleupdevagency.com"
 
-  const plumbingOptions = [
-    { id: "black-square-shower", name: "Black Square External Shower" },
-    { id: "dometic-cassette", name: "Dometic Cassette Ceramic Bowl Toilet & Spare Toilet Cassette" },
-    { id: "water-filter", name: "Water Filter with Separate Tap" },
-    { id: "counter-top-ceramic", name: "Counter Top Ceramic Oval White Ensuite Basin and Chrome Swivel Tap" },
-    { id: "bbq-gas-point-1", name: "2 x BBQ Gas Point under Tunnel Boot on Doorside" },
-    { id: "bbq-gas-point-2", name: "1 x BBQ Gas Point under Tunnel Boot and 1 at Rear of Van on Doorside" },
-    { id: "external-water-tap-1", name: "1 x External Water Tap behind Wheels" },
-    { id: "external-water-tap-2", name: "1 x External Water Tap on A-Frame with Protector" },
-    { id: "main-water-inlet", name: "1 x Main Water Inlet behind Wheels" },
-  ]
+        // Add timeout and better error handling
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
-  const internalOptions = [
-    { id: "square-benchtop", name: "Square Benchtop Edging" },
-    { id: "no-splashback", name: "NO Splashback" },
-    { id: "flat-cupboard", name: "Flat Cupboard Door Style" },
-    { id: "tie-cushion", name: "Tie Cushion As Per Upholstery Seating Base" },
-    { id: "bench-seating", name: "Bench Seating with Drop Down Table Leg" },
-    { id: "additional-drawer-ensuite", name: "Additional 3 x Drawer under Ensuite Vanity Next to Shower" },
-    { id: "additional-pot-drawer", name: "Additional Pot Drawer under Stove" },
-    { id: "additional-shelf-kitchen", name: "Additional 1 x Shelf at Kitchen OHC Above Sink" },
-    { id: "additional-shelf-lounge", name: "Additional 2 x Shelf at Lounge OHC" },
-    { id: "lips-shelves", name: "Lips on All Shelves" },
-    { id: "pelmet-bedroom", name: "Pelmet on Bedroom Windows" },
-    { id: "pelmet-lounge", name: "Pelmet on Lounge Window" },
-    { id: "standard-grab-handles", name: "Standard Internal Grab Handle" },
-    { id: "mirror-shower", name: "Mirror Glass Shower Door" },
-    { id: "piano-cabinet", name: "Piano Cabinet Door Hinge" },
-    { id: "key-hook", name: "1 x Key Hook at Entry" },
-    { id: "white-square-sink", name: "White Square Sink Cover" },
-  ]
+        const response = await fetch(`${baseUrl}/api/addtional-options?type=Manufacturer Options`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+        })
 
-  // Placeholder for other category options
-  const otherCategoryOptions = [
-    { id: "option-1", name: "Option 1" },
-    { id: "option-2", name: "Option 2" },
-    { id: "option-3", name: "Option 3" },
-  ]
+        clearTimeout(timeoutId)
 
-  const getOptionsForCategory = (categoryId: string) => {
-    switch (categoryId) {
-      case "internal":
-        return internalOptions
-      case "plumbing":
-        return plumbingOptions
-      default:
-        return otherCategoryOptions
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.data?.data && Array.isArray(data.data.data)) {
+            setOptions(data.data.data)
+            console.log("Fetched manufacturer options:", data.data.data)
+          } else {
+            throw new Error("Invalid API response structure")
+          }
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+      } catch (error) {
+        console.warn("Error fetching manufacturer options, using fallback data:", error)
+        // Fallback data based on your API response structure
+        const fallbackOptions = [
+          {
+            id: 42,
+            name: "Dometic MiniGrill Gas/Elec",
+            price: "660.00",
+            vehicle_model_id: 4,
+            category_name: "Appliances options",
+            type: "Manufacturer Options",
+            created_at: "2025-05-30T10:18:51.000000Z",
+            updated_at: "2025-05-30T10:24:14.000000Z",
+          },
+          {
+            id: 43,
+            name: '4" (50x100) Hot Dip Gal Deck',
+            price: "660.00",
+            vehicle_model_id: 4,
+            category_name: "Chassis options",
+            type: "Manufacturer Options",
+            created_at: "2025-05-30T10:25:48.000000Z",
+            updated_at: "2025-05-30T10:25:48.000000Z",
+          },
+        ]
+        setOptions(fallbackOptions)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+
+    fetchOptions()
+  }, [])
+
+  // Group options by category with safety checks
+  const groupedOptions = options.reduce(
+    (acc, option) => {
+      const category = option?.category_name || "Other"
+      if (!acc[category]) {
+        acc[category] = []
+      }
+      acc[category].push(option)
+      return acc
+    },
+    {} as Record<string, AdditionalOption[]>,
+  )
+
+  const categories = Object.keys(groupedOptions).map((categoryName) => ({
+    id: categoryName.toLowerCase().replace(/\s+/g, "-"),
+    name: categoryName.toUpperCase(),
+  }))
 
   // Initialize or get the manufacturer options from formData
   const manufacturerOptions: ManufacturerOptionsData =
     typeof formData.manufacturerOptions === "object" &&
-      formData.manufacturerOptions !== null &&
-      !Array.isArray(formData.manufacturerOptions)
+    formData.manufacturerOptions !== null &&
+    !Array.isArray(formData.manufacturerOptions)
       ? (formData.manufacturerOptions as ManufacturerOptionsData)
       : {}
 
-  // Handle option selection (single selection per category)
-  const handleOptionSelect = (category: string, optionId: string) => {
+  // Handle option selection (multiple selections allowed)
+  const handleOptionSelect = (optionId: number) => {
     const updatedOptions = { ...manufacturerOptions }
 
-    // If the option is already selected, deselect it
-    if (updatedOptions[category] === optionId) {
-      updatedOptions[category] = null
+    // Toggle the option
+    if (updatedOptions[optionId]) {
+      delete updatedOptions[optionId]
     } else {
-      // Otherwise, select this option (replacing any previous selection in this category)
-      updatedOptions[category] = optionId
+      updatedOptions[optionId] = true
     }
 
     updateFormData("manufacturerOptions", updatedOptions)
   }
 
   const handleCategoryClick = (categoryId: string) => {
-    setOpenCategory(categoryId)
+    setOpenCategory(openCategory === categoryId ? null : categoryId)
   }
 
   const resetOptions = () => {
     updateFormData("manufacturerOptions", {})
   }
 
+  // Calculate total price of selected options
+  const calculateTotalPrice = () => {
+    let total = 0
+    Object.keys(manufacturerOptions).forEach((optionId) => {
+      if (manufacturerOptions[optionId]) {
+        const option = options.find((opt) => opt.id === Number.parseInt(optionId))
+        if (option) {
+          total += Number.parseFloat(option.price)
+        }
+      }
+    })
+    return total
+  }
+
   const basePrice = 79500
+  const totalOptionsPrice = calculateTotalPrice()
+  const totalPrice = basePrice + totalOptionsPrice
+  const baseUrl = "https://ben10.scaleupdevagency.com"
 
-
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-white mt-[80px]">
+        <div>Loading manufacturer options...</div>
+      </div>
+    )
+  }
 
   return (
     <div className=" text-white mt-[80px]">
-
-
       <div className="grid grid-cols-5 gap-6">
         <div className=" space-y-2 col-span-5 md:col-span-2">
           <h2 className="text-xl font-bold mb-6">Select Manufacturer Options</h2>
@@ -119,8 +177,9 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
               {/* Category Button */}
               <button
                 onClick={() => handleCategoryClick(category.id)}
-                className={`w-full p-3 text-left font-bold flex justify-between items-center ${openCategory === category.id ? "bg-[#333]" : "bg-[#1e1e1e] hover:bg-[#2a2a2a]"
-                  }`}
+                className={`w-full p-3 text-left font-bold flex justify-between items-center ${
+                  openCategory === category.id ? "bg-[#333]" : "bg-[#1e1e1e] hover:bg-[#2a2a2a]"
+                }`}
               >
                 <span>{category.name}</span>
               </button>
@@ -137,18 +196,29 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
                     className="overflow-hidden"
                   >
                     <div className="bg-[#1e1e1e] p-4 space-y-2 border-t border-gray-800">
-                      {getOptionsForCategory(category.id).map((option) => (
-                        <div key={option.id} className="flex items-start">
-                          <input
-                            type="checkbox"
-                            id={option.id}
-                            checked={manufacturerOptions[category.id] === option.id}
-                            onChange={() => handleOptionSelect(category.id, option.id)}
-                            className="mt-1 mr-2 h-4 w-4 accent-yellow-400"
-                          />
-                          <label htmlFor={option.id} className="text-sm">
-                            {option.name}
-                          </label>
+                      {(
+                        groupedOptions[
+                          Object.keys(groupedOptions).find(
+                            (key) => key.toLowerCase().replace(/\s+/g, "-") === category.id,
+                          ) || ""
+                        ] || []
+                      ).map((option) => (
+                        <div key={option.id} className="flex items-start justify-between">
+                          <div className="flex items-start flex-1">
+                            <input
+                              type="checkbox"
+                              id={`option-${option.id}`}
+                              checked={!!manufacturerOptions[option.id]}
+                              onChange={() => handleOptionSelect(option.id)}
+                              className="mt-1 mr-2 h-4 w-4 accent-yellow-400"
+                            />
+                            <label htmlFor={`option-${option.id}`} className="text-sm flex-1">
+                              {option.name || "Unknown Option"}
+                            </label>
+                          </div>
+                          <span className="text-sm text-yellow-400 ml-2">
+                            ${Number.parseFloat(option.price || "0").toFixed(2)}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -169,14 +239,17 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
 
         <div className="bg-[#1e1e1e] p-6 col-span-5 md:col-span-3 mt-[100px]">
           <div className="space-y-6">
-            <div className="mt-[-130px] mb-6 flex justify-center">
+            <div className="mt-[-170px] mb-6 flex justify-center">
               <img
-                src="/assets/mainmodel.webp"
-                alt="Caravan Preview"
-                className="w-[250px] h-[200px] object-contain"
+                src={`${baseUrl}/${formData.modelData?.outer_image}`}
+                alt={`${formData.modelData?.name} Interior Preview`}
+                className="w-[350px] h-[300px] object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg?height=300&width=350"
+                }}
               />
             </div>
-            <h3 className="text-center text-white">Your New SRC-14</h3>
+            <h3 className="text-center text-white">Your New {formData.modelData?.name || "SRC-14"}</h3>
 
             <div className="mt-8 pt-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
@@ -197,27 +270,11 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
 
               <div className="mt-4 flex justify-between items-center">
                 <h3 className="font-bold">Manufacturer Options</h3>
-                <span className="font-bold">$0.00</span>
+                <span className="font-bold text-[#FFE4A8]">${totalOptionsPrice.toFixed(2)}</span>
               </div>
 
               <div className="text-xs space-y-1 text-gray-400 text-start pt-2">
-                {Object.entries(manufacturerOptions).map(([category, optionId]) => {
-                  if (!optionId) return null
-
-                  const categoryObj = categories.find((c) => c.id === category)
-                  const options = getOptionsForCategory(category)
-                  const option = options.find((o) => o.id === optionId)
-
-                  if (!option) return null
-
-                  return (
-                    <p key={`${category}-${optionId}`}>
-                      {option.name} ({categoryObj?.name})
-                    </p>
-                  )
-                })}
-
-                {Object.keys(manufacturerOptions).length === 0 && (
+                {Object.keys(manufacturerOptions).length === 0 ? (
                   <>
                     <p>NZ Type Power Inlet (NZ Dealer Pack)</p>
                     <p>Remove TV Antenna and Prewire Roof Satellite (NZ Dealer Pack)</p>
@@ -225,12 +282,26 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
                     <p>Gas Bottle Holder Only (NZ Dealer Pack)</p>
                     <p>4" (50+100) Hot Dip Gal Deck</p>
                   </>
+                ) : (
+                  Object.keys(manufacturerOptions).map((optionId) => {
+                    if (!manufacturerOptions[optionId]) return null
+
+                    const option = options.find((opt) => opt.id === Number.parseInt(optionId))
+                    if (!option) return null
+
+                    return (
+                      <div key={optionId} className="flex justify-between">
+                        <span>{option.name}</span>
+                        <span className="text-yellow-400">${Number.parseFloat(option.price).toFixed(2)}</span>
+                      </div>
+                    )
+                  })
                 )}
               </div>
 
               <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
                 <h3 className="font-bold text-start">Estimated Total Build Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${basePrice.toLocaleString()}</span>
+                <span className="text-xl font-bold text-[#FFE4A8]">${totalPrice.toLocaleString()}</span>
               </div>
             </div>
           </div>

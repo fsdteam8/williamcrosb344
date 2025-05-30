@@ -42,6 +42,13 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
   const [decalColors, setDecalColors] = useState<any[]>([])
   const [colorsLoading, setColorsLoading] = useState(true)
 
+  const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
+
+  const externalOptions =
+    typeof formData.externalOptions === "object" && formData.externalOptions !== null
+      ? (formData.externalOptions as ExternalOptionsData)
+      : ({} as ExternalOptionsData)
+
   useEffect(() => {
     const types = ["External Base Colours", "sabit"]
     setColorTypes(types)
@@ -105,10 +112,28 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     fetchColors()
   }, [])
 
-  const externalOptions =
-    typeof formData.externalOptions === "object" && formData.externalOptions !== null
-      ? (formData.externalOptions as ExternalOptionsData)
-      : ({} as ExternalOptionsData)
+  // Add this useEffect after the existing useEffect for fetching colors
+  useEffect(() => {
+    // Auto-select first base color if none selected and colors are available
+    if (!externalOptions.baseColorId && baseColors.length > 0) {
+      handleBaseColorSelect(baseColors[0])
+    }
+  }, [baseColors, externalOptions.baseColorId])
+
+  useEffect(() => {
+    // Auto-select first decal color if none selected and colors are available
+    if (!externalOptions.decalColorId && decalColors.length > 0) {
+      handleDecalColorSelect(decalColors[0])
+    }
+  }, [decalColors, externalOptions.decalColorId])
+
+  const handleColorSelect = (colorData: Partial<ExternalOptionsData>) => {
+    updateFormData("externalOptions", {
+      ...externalOptions,
+      ...colorData,
+      colorTypes: colorTypes,
+    })
+  }
 
   // Fetch model-color-wise images when colors change
   useEffect(() => {
@@ -152,14 +177,6 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     fetchModelColorImages()
   }, [externalOptions.baseColorId, externalOptions.decalColorId, formData.modelData?.id])
 
-  const handleColorSelect = (colorData: Partial<ExternalOptionsData>) => {
-    updateFormData("externalOptions", {
-      ...externalOptions,
-      ...colorData,
-      colorTypes: colorTypes,
-    })
-  }
-
   const handleBaseColorSelect = (color: any) => {
     handleColorSelect({
       baseColor: color.id,
@@ -174,7 +191,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     })
   }
 
-  const basePrice = 79500
+  const baseUrl = "https://ben10.scaleupdevagency.com"
 
   // Get caravan images from API or fallback
   const getCaravanImages = () => {
@@ -185,9 +202,9 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
 
     // Fallback images
     return [
-      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals right side",
-      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals front view",
-      "/placeholder.svg?height=300&width=500&query=silver caravan with teal decals rear view",
+      "/placeholder.svg?height=300&width=500",
+      "/placeholder.svg?height=300&width=500",
+      "/placeholder.svg?height=300&width=500",
     ]
   }
 
@@ -229,7 +246,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                         alt={color.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64"
                         }}
                       />
                     </div>
@@ -252,7 +269,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                         alt={baseColors[3].name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64"
                         }}
                       />
                     </div>
@@ -296,7 +313,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                         alt={color.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64"
                         }}
                       />
                     </div>
@@ -323,7 +340,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                         alt={decalColors[6].name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=64&width=64&query=color sample"
+                          e.currentTarget.src = "/placeholder.svg?height=64&width=64"
                         }}
                       />
                     </div>
@@ -341,11 +358,14 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
 
         <div className="col-span-5 lg:col-span-3 bg-[#1e1e1e] p-6 rounded-lg mt-[80px]">
           <div className="space-y-6">
-            <div className="mt-[-130px] mb-6 flex justify-center">
+            <div className="mt-[-170px] mb-6 flex justify-center">
               <img
-                src="/placeholder.svg?height=200&width=250&query=caravan model preview"
-                alt="Caravan Preview"
-                className="w-[250px] h-[200px] object-contain"
+                src={`${baseUrl}/${formData.modelData?.outer_image}`}
+                alt={`${formData.modelData?.name} Interior Preview`}
+                className="w-[350px] h-[300px] object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg?height=300&width=350"
+                }}
               />
             </div>
             <h3 className="text-center text-white">Your New {formData.modelData?.name || "SRC-14"}</h3>
@@ -383,13 +403,12 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                     <img
                       src={
                         baseColors.find((c) => c.id === externalOptions.baseColor)?.image ||
-                        "/placeholder.svg?height=20&width=20&query=silver color"
+                        "/placeholder.svg?height=20&width=20&query=silver color" ||
+                        "/placeholder.svg" ||
+                        "/placeholder.svg"
                       }
                       alt={baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg?height=20&width=20&query=silver color"
-                      }}
                     />
                   </div>
                 </div>
@@ -405,32 +424,24 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                     <img
                       src={
                         decalColors.find((c) => c.id === externalOptions.decalColor)?.image ||
-                        "/placeholder.svg?height=20&width=20&query=teal color"
+                        "/placeholder.svg?height=20&width=20&query=teal color" ||
+                        "/placeholder.svg" ||
+                        "/placeholder.svg"
                       }
                       alt={decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg?height=20&width=20&query=teal color"
-                      }}
                     />
                   </div>
                 </div>
               </div>
-
-              {modelColorImages.length > 0 && (
-                <div className="mt-4 p-2 bg-green-900/20 rounded">
-                  <p className="text-xs text-green-400">✓ Custom color combination image loaded</p>
-                  <p className="text-xs text-gray-400">
-                    {modelColorImages[0].color1.name} + {modelColorImages[0].color2.name}
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="mt-8 pt-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">Base Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${basePrice.toLocaleString()}</span>
+                <span className="text-xl font-bold text-[#FFE4A8]">
+                  ${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}
+                </span>
               </div>
 
               <div className="space-y-1 mt-2 text-xs text-gray-400 text-start">
@@ -459,7 +470,9 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
 
               <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
                 <h3 className="font-bold text-start">Estimated Total Build Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${basePrice.toLocaleString()}</span>
+                <span className="text-xl font-bold text-[#FFE4A8]">
+                  ${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}
+                </span>
               </div>
             </div>
           </div>

@@ -9,6 +9,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { ManufacturerForm } from "./components/manufacturer-form"
+import { toast } from "react-toastify"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface ManufacturerOption {
   id: number
@@ -53,17 +64,24 @@ export default function Manufacturer() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [currentOption, setCurrentOption] = useState<ManufacturerOption | null>(null)
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<number | null>(null)
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+
+  const getAuthToken = () => {
+    return localStorage.getItem("authToken") || ""
+  }
+
   // Fetch manufacturer options
   const fetchManufacturerOptions = async (page = 1) => {
     try {
       setLoading(true)
       const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options?page=${page}`)
       const data: ApiResponse = await response.json()
-      console.log("API Response:", data.data.data)
 
       if (data.success) {
         // Filter only manufacturer options
-        const manufacturerData = data.data.data.filter((option) => option.type === "Manufacturer Options")
+        const manufacturerData = data.data.data
         console.log("Manufacturer Options:", manufacturerData)
         setManufacturerOptions(manufacturerData)
         setFilteredOptions(manufacturerData)
@@ -110,9 +128,10 @@ export default function Manufacturer() {
   }
 
   // Add new manufacturer option
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleAddOption = async (formData: any) => {
     try {
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/addtional-options", {
+      const response = await fetch(`${process.env.VITE_BACKEND_URL}/api/addtional-options`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,6 +157,7 @@ export default function Manufacturer() {
     setIsEditModalOpen(true)
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditOption = async (formData: any) => {
     if (!currentOption) return
 
@@ -148,6 +168,7 @@ export default function Manufacturer() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify({
             ...formData,
@@ -168,38 +189,69 @@ export default function Manufacturer() {
 
   // Delete single manufacturer option
   const handleDeleteOption = async (id: number) => {
-    if (confirm("Are you sure you want to delete this manufacturer option?")) {
-      try {
-        const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
-          method: "DELETE",
-        })
+    setItemToDelete(id)
+    setDeleteConfirmOpen(true)
+  }
 
-        if (response.ok) {
-          fetchManufacturerOptions(currentPage)
-          setSelectedItems((prev) => prev.filter((item) => item !== id))
-        }
-      } catch (error) {
-        console.error("Error deleting manufacturer option:", error)
+  const confirmDeleteOption = async () => {
+    if (!itemToDelete) return
+
+    try {
+      const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${itemToDelete}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      })
+
+      if (response.ok) {
+         toast.success(`Manufacturer Option  deleted successfully!`, {
+               position: "top-right",
+               autoClose: 3000,
+               hideProgressBar: false,
+               closeOnClick: true,
+               pauseOnHover: true,
+               draggable: true,
+             })
+        fetchManufacturerOptions(currentPage)
+        setSelectedItems((prev) => prev.filter((item) => item !== itemToDelete))
+      } else {
+        toast.error("Failed to delete manufacturer option")
       }
+    } catch (error) {
+      console.error("Error deleting manufacturer option:", error)
+      toast.error("Error deleting manufacturer option")
+    } finally {
+      setDeleteConfirmOpen(false)
+      setItemToDelete(null)
     }
   }
 
   // Bulk delete
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${selectedItems.length} manufacturer options?`)) {
-      try {
-        await Promise.all(
-          selectedItems.map((id) =>
-            fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
-              method: "DELETE",
-            }),
-          ),
-        )
-        setSelectedItems([])
-        fetchManufacturerOptions(currentPage)
-      } catch (error) {
-        console.error("Error bulk deleting manufacturer options:", error)
-      }
+    setBulkDeleteConfirmOpen(true)
+  }
+
+  const confirmBulkDelete = async () => {
+    try {
+      await Promise.all(
+        selectedItems.map((id) =>
+          fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${getAuthToken()}`,
+            },
+          }),
+        ),
+      )
+      toast.success(`${selectedItems.length} manufacturer options deleted successfully!`)
+      setSelectedItems([])
+      fetchManufacturerOptions(currentPage)
+    } catch (error) {
+      console.error("Error bulk deleting manufacturer options:", error)
+      toast.error("Error deleting manufacturer options")
+    } finally {
+      setBulkDeleteConfirmOpen(false)
     }
   }
 
@@ -247,8 +299,8 @@ export default function Manufacturer() {
               <TableHead>Price</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Vehicle Model ID</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Created At</TableHead>
-              <TableHead>Updated At</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -281,8 +333,8 @@ export default function Manufacturer() {
                   <TableCell>${option.price}</TableCell>
                   <TableCell>{option.category_name}</TableCell>
                   <TableCell>{option.vehicle_model_id || "N/A"}</TableCell>
+                  <TableCell>{option.type}</TableCell>
                   <TableCell>{new Date(option.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{new Date(option.updated_at).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button
@@ -377,6 +429,42 @@ export default function Manufacturer() {
         initialData={currentOption || undefined}
         onSubmit={handleEditOption}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this manufacturer option? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteOption} className="bg-red-500 hover:bg-red-600">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Bulk Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedItems.length} manufacturer options? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmBulkDelete} className="bg-red-500 hover:bg-red-600">
+              Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -56,7 +56,7 @@ function App() {
       <Route>
         {/* Public routes */}
         <Route index path={ROUTE_PATHS.HOME} element={<Home />} />
-        <Route index path="/orderpage" element={<OrderPage />} />
+        <Route path="/order/:orderId" element={<OrderPage />} />
         <Route path={ROUTE_PATHS.LOGIN} element={<Login />} />
         <Route path={ROUTE_PATHS.FORGOT_PASSWORD} element={<ForgotPassword />} />
         <Route path={ROUTE_PATHS.RESET_PASSWORD} element={<ResetPassword />} />

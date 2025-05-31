@@ -26,6 +26,7 @@ interface ModelColorWiseImage {
   color_1_id: number
   color_2_id: number
   image: string
+  image2?: string
   created_at: string
   updated_at: string
   vehicle_model: VehicleModel
@@ -46,6 +47,7 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
     color_1_id: "",
     color_2_id: "",
     image: null as File | null,
+    image2: null as File | null,
   })
 
   const [vehicleModels, setVehicleModels] = useState<VehicleModel[]>([])
@@ -53,8 +55,11 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [imagePreview2, setImagePreview2] = useState<string | null>(null)
   const [externalBaseColours, setExternalBaseColours] = useState<Color[]>([])
   const [externalDecalsColours, setExternalDecalsColours] = useState<Color[]>([])
+
+  console.log(colors)
 
   const getAuthToken = () => {
     return localStorage.getItem("authToken") || ""
@@ -121,10 +126,14 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
         color_1_id: initialData.color_1_id.toString(),
         color_2_id: initialData.color_2_id.toString(),
         image: null,
+        image2: null,
       })
       // Set preview for existing image
       if (initialData.image) {
         setImagePreview(`${import.meta.env.VITE_BACKEND_URL}/${initialData.image}`)
+      }
+      if (initialData.image2) {
+        setImagePreview2(`${import.meta.env.VITE_BACKEND_URL}/${initialData.image2}`)
       }
     } else {
       setFormData({
@@ -132,8 +141,10 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
         color_1_id: "",
         color_2_id: "",
         image: null,
+        image2: null,
       })
       setImagePreview(null)
+      setImagePreview2(null)
     }
     setErrors({})
   }, [initialData, open])
@@ -163,6 +174,23 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
     }
   }
 
+  const handleFileChange2 = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setFormData((prev) => ({ ...prev, image2: file }))
+
+    // Create preview URL for new file
+    if (file) {
+      const previewUrl = URL.createObjectURL(file)
+      setImagePreview2(previewUrl)
+    } else {
+      setImagePreview2(initialData ? `${import.meta.env.VITE_BACKEND_URL}/${initialData.image2}` : null)
+    }
+
+    if (errors.image2) {
+      setErrors((prev) => ({ ...prev, image2: "" }))
+    }
+  }
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
@@ -180,6 +208,10 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
 
     if (!initialData && !formData.image) {
       newErrors.image = "Image is required"
+    }
+
+    if (!initialData && !formData.image2) {
+      newErrors.image2 = "Image 2 is required"
     }
 
     setErrors(newErrors)
@@ -200,6 +232,9 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
     if (formData.image) {
       submitData.append("image", formData.image)
     }
+    if (formData.image2) {
+      submitData.append("image2", formData.image2)
+    }
 
     onSubmit(submitData)
 
@@ -209,23 +244,26 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
       color_1_id: "",
       color_2_id: "",
       image: null,
+      image2: null,
     })
     setImagePreview(null)
+    setImagePreview2(null)
     setErrors({})
   }
 
   const handleClose = () => {
     onOpenChange(false)
-    // Clean up preview URL
+    // Clean up preview URLs
     if (imagePreview && imagePreview.startsWith("blob:")) {
       URL.revokeObjectURL(imagePreview)
     }
+    if (imagePreview2 && imagePreview2.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview2)
+    }
     setImagePreview(null)
+    setImagePreview2(null)
   }
 
-  const selectedVehicleModel = vehicleModels.find((model) => model.id.toString() === formData.vehicle_model_id)
-  const selectedColor1 = externalBaseColours.find((color) => color.id.toString() === formData.color_1_id)
-  const selectedColor2 = externalDecalsColours.find((color) => color.id.toString() === formData.color_2_id)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -318,7 +356,7 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">Image {!initialData && "*"}</Label>
+            <Label htmlFor="image">Image 1 {!initialData && "*"}</Label>
             <Input
               id="image"
               type="file"
@@ -340,12 +378,35 @@ export function ModelColorWiseImageForm({ open, onOpenChange, onSubmit, initialD
               </div>
             )}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="image2">Image 2 {!initialData && "*"}</Label>
+            <Input
+              id="image2"
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange2}
+              className={`cursor-pointer ${errors.image2 ? "border-red-500" : ""}`}
+            />
+            {errors.image2 && <p className="text-sm text-red-500">{errors.image2}</p>}
+            {initialData && <p className="text-sm text-muted-foreground">Leave empty to keep current image</p>}
+
+            {/* Image Preview */}
+            {imagePreview2 && (
+              <div className="mt-2">
+                <img
+                  src={imagePreview2 || "/placeholder.svg"}
+                  alt="Preview 2"
+                  className="w-32 h-24 rounded object-cover border"
+                />
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-red-500 hover:bg-red-600" disabled={loading}>
+            <Button type="submit" className="cursor-pointer" disabled={loading}>
               {loading ? "Loading..." : initialData ? "Update" : "Add"} Image
             </Button>
           </div>

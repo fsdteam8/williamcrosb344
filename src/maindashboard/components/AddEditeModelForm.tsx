@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { VehicleModel } from "@/lib/types"
 
 // Form Schema - Made images completely optional
 const modelFormSchema = z.object({
@@ -34,10 +35,10 @@ interface Category {
 }
 
 interface ModelFormProps {
-  initialData?: any | null
+  initialData?: VehicleModel | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: any) => Promise<any>
+  onSubmit: (data: FormData) => Promise<void>
   isEditing?: boolean
 }
 
@@ -193,7 +194,7 @@ export const ModelForm = ({ initialData, open, onOpenChange, onSubmit, isEditing
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-2">
               {/* Name Field */}
               <FormField
                 control={form.control}
@@ -301,7 +302,7 @@ export const ModelForm = ({ initialData, open, onOpenChange, onSubmit, isEditing
                 name="inner_image"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Inner Image (Optional)</FormLabel>
+                    <FormLabel>Outer Image</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
                         <Input
@@ -345,7 +346,7 @@ export const ModelForm = ({ initialData, open, onOpenChange, onSubmit, isEditing
                 name="outer_image"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Outer Image (Optional)</FormLabel>
+                    <FormLabel>Model Image</FormLabel>
                     <FormControl>
                       <div className="space-y-4">
                         <Input

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom" 
+import { useNavigate } from "react-router-dom"
 import StepBar from "./step-bar"
 import ModelSelection from "./steps/model-selection"
 import ColorSelection from "./steps/color-selection"
@@ -9,7 +9,7 @@ import ExternalOptions from "./steps/external-options"
 import ManufacturerOptions from "./steps/manufacturer-options"
 import SaveAndShare from "./steps/save-and-share"
 import { Loader2 } from "lucide-react"
-import type { ModelCategory, VehicleModel, Color, FormData } from "@/lib/types"
+import type { ModelCategory, VehicleModel, Color, FormData, OrderResponse } from "@/lib/types"
 import VanariOptions from "./steps/vanari-options"
 
 export default function MultiStepForm() {
@@ -22,10 +22,11 @@ export default function MultiStepForm() {
   const [formData, setFormData] = useState<FormData>({
     model: "",
     modelData: null,
-    color: "",
-    externalOptions: [],
-    manufacturerOptions: [],
-    vanariOptions: [],
+    color: null,
+    externalOptions: {},
+    manufacturerOptions: {},
+    vanariOptions: {},
+    selectedTheme: null, // Keep this property as it exists in your current implementation
     contactInfo: {
       firstName: "",
       lastName: "",
@@ -37,7 +38,10 @@ export default function MultiStepForm() {
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [orderResponse, setOrderResponse] = useState<any>(null)
+  const [orderResponse, setOrderResponse] = useState<OrderResponse | null>(null)
+
+
+  console.log(orderResponse)
 
   // Fetch data from APIs
   useEffect(() => {
@@ -46,7 +50,7 @@ export default function MultiStepForm() {
         setLoading(true)
 
         // Use direct API URL
-        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
         // Fetch model categories with error handling
         try {
@@ -96,43 +100,9 @@ export default function MultiStepForm() {
             setVehicleModels(modelsData.data || [])
           } else {
             console.warn("Failed to fetch models, using fallback data")
-            setVehicleModels([
-              {
-                id: 13,
-                name: "SRC-14",
-                sleep_person: "2-3",
-                description:
-                  "Welcome to the world of the SRC-14, the ultimate small caravan with ensuite that doesn't sacrifice on comfort or functionality.",
-                inner_image: "uploads/1748403721_SRC14-Snowy-River-Caravans-LRV231153-Theme-3.png",
-                category_id: 6,
-                base_price: "79500.00",
-                price: "79500.00",
-                category: {
-                  id: 6,
-                  name: "SRC",
-                },
-              },
-            ])
           }
         } catch (error) {
           console.warn("Models API error:", error)
-          setVehicleModels([
-            {
-              id: 13,
-              name: "SRC-14",
-              sleep_person: "2-3",
-              description:
-                "Welcome to the world of the SRC-14, the ultimate small caravan with ensuite that doesn't sacrifice on comfort or functionality.",
-              inner_image: "uploads/1748403721_SRC14-Snowy-River-Caravans-LRV231153-Theme-3.png",
-              category_id: 6,
-              base_price: "79500.00",
-              price: "79500.00",
-              category: {
-                id: 6,
-                name: "SRC",
-              },
-            },
-          ])
         }
 
         // Fetch colors with error handling
@@ -166,7 +136,7 @@ export default function MultiStepForm() {
     fetchData()
   }, [])
 
-  const updateFormData = (field: keyof FormData, value: any) => {
+  const updateFormData = (field: keyof FormData, value: FormData[typeof field]) => {
     setFormData((prev) => {
       const newData = {
         ...prev,
@@ -197,6 +167,8 @@ export default function MultiStepForm() {
     }
   }
 
+  // Find the handleSaveAndView function and replace it with this updated version that properly calculates total price
+
   const handleSaveAndView = async () => {
     try {
       setSaving(true)
@@ -204,68 +176,99 @@ export default function MultiStepForm() {
       // Calculate pricing
       const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
 
-      const calculateManufacturerOptionsPrice = () => {
-        const total = 0
-        if (formData.manufacturerOptions && typeof formData.manufacturerOptions === "object") {
-          // Add manufacturer options price calculation logic here
+      // Get selected manufacturer options
+      const selectedManufacturerOptionIds = Object.keys(formData.manufacturerOptions || {})
+        .filter((optionId) => formData.manufacturerOptions[optionId])
+        .map((optionId) => Number.parseInt(optionId))
+
+      // Get selected vanari options
+      const selectedVanariOptionIds = Object.keys(formData.vanariOptions || {})
+        .filter((optionId) => formData.vanariOptions[optionId])
+        .map((optionId) => Number.parseInt(optionId))
+
+      // Fetch all options to get their prices
+      const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+      let manufacturerOptions = []
+      let vanariOptions = []
+
+      try {
+        // Fetch manufacturer options
+        const manufacturerResponse = await fetch(`${baseUrl}/api/addtional-options?type=Manufacturer Options`)
+        if (manufacturerResponse.ok) {
+          const manufacturerData = await manufacturerResponse.json()
+          manufacturerOptions = manufacturerData.data?.data || []
         }
-        return total
+
+        // Fetch vanari options
+        const vanariResponse = await fetch(`${baseUrl}/api/addtional-options?type=Vanari Options`)
+        if (vanariResponse.ok) {
+          const vanariData = await vanariResponse.json()
+          vanariOptions = vanariData.data?.data || []
+        }
+      } catch (error) {
+        console.warn("Error fetching options for price calculation:", error)
       }
 
-      const calculateVanariOptionsPrice = () => {
-        const total = 0
-        if (formData.vanariOptions && typeof formData.vanariOptions === "object") {
-          // Add vanari options price calculation logic here
-        }
-        return total
-      }
+      // Calculate manufacturer options price
+      const manufacturerOptionsPrice = selectedManufacturerOptionIds.reduce((total, optionId) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const option = manufacturerOptions.find((opt  : any) => opt.id === optionId)
+        return total + (option ? Number.parseFloat(option.price) : 0)
+      }, 0)
 
-      // Prepare order data
+      // Calculate vanari options price
+      const vanariOptionsPrice = selectedVanariOptionIds.reduce((total, optionId) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const option = vanariOptions.find((opt: any) => opt.id === optionId)
+        return total + (option ? Number.parseFloat(option.price) : 0)
+      }, 0)
+
+      // Calculate total price
+      const totalPrice = basePrice + manufacturerOptionsPrice + vanariOptionsPrice
+
+      // Prepare order data to match the API specification
       const orderData = {
-        // Customer Information
+        // Model Information
+        vehicle_model_id: formData.modelData?.id || null,
+
+        // Theme Information
+        theme_id: formData.color?.themeId || null,
+
+        // Customer Information (individual fields, not nested)
         first_name: formData.contactInfo?.firstName || "",
         last_name: formData.contactInfo?.lastName || "",
         email: formData.contactInfo?.email || "",
         phone: formData.contactInfo?.phone || "",
         postal_code: formData.contactInfo?.postalCode || "",
 
-        // Model Information
-        vehicle_model_id: formData.modelData?.id || null,
-        model_name: formData.modelData?.name || "",
-
-        // Theme/Color Information
-        theme_id: formData.color?.themeId || null,
-        theme_name: formData.color?.themeName || "",
-
-        // External Colors
-        base_color_id: formData.externalOptions?.baseColorId || null,
-        base_color_name: formData.externalOptions?.baseColor || "",
-        decal_color_id: formData.externalOptions?.decalColorId || null,
-        decal_color_name: formData.externalOptions?.decalColor || "",
-
-        // Selected Options
-        manufacturer_options: Object.keys(formData.manufacturerOptions || {})
-          .filter((optionId) => formData.manufacturerOptions[optionId])
-          .map((optionId) => Number.parseInt(optionId)),
-
-        vanari_options: Object.keys(formData.vanariOptions || {})
-          .filter((optionId) => formData.vanariOptions[optionId])
-          .map((optionId) => Number.parseInt(optionId)),
-
         // Pricing
-        base_price: basePrice,
-        manufacturer_options_price: calculateManufacturerOptionsPrice(),
-        vanari_options_price: calculateVanariOptionsPrice(),
-        total_price: basePrice + calculateManufacturerOptionsPrice() + calculateVanariOptionsPrice(),
+        base_price: basePrice.toString(),
+        total_price: totalPrice.toString(),
 
-        // Additional metadata
-        configuration_data: JSON.stringify(formData),
+        // Colors as proper array
+        color_id: [
+          formData.externalOptions?.baseColorId || null,
+          formData.externalOptions?.decalColorId || null,
+        ].filter((id) => id !== null), // Remove null values
+
+        // Additional Options as proper array
+        additional_option_id: [
+          // Manufacturer options
+          ...Object.keys(formData.manufacturerOptions || {})
+            .filter((optionId) => formData.manufacturerOptions[optionId])
+            .map((optionId) => Number.parseInt(optionId)),
+
+          // Vanari options
+          ...Object.keys(formData.vanariOptions || {})
+            .filter((optionId) => formData.vanariOptions[optionId])
+            .map((optionId) => Number.parseInt(optionId)),
+        ],
       }
 
       console.log("Sending order data:", orderData)
 
       // Post to API
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/orders", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -279,9 +282,14 @@ export default function MultiStepForm() {
         setOrderResponse(result)
         setShowSaveModal(false)
 
-        // Navigate to order page with configuration data
-        const configParam = encodeURIComponent(JSON.stringify(formData))
-         navigate(`/order?config=${configParam}`)  // Changed this line
+        // Navigate to order page with the order uniq_id if available, otherwise use configuration data
+        if (result.data?.uniq_id) {
+          navigate(`/order/${result.data.uniq_id}`)
+        } else {
+          // Fallback to configuration data
+          const configParam = encodeURIComponent(JSON.stringify(formData))
+          navigate(`/order?config=${configParam}`)
+        }
       } else {
         const errorData = await response.json()
         console.error("Failed to save order:", errorData)
@@ -371,7 +379,7 @@ export default function MultiStepForm() {
           <div className="flex justify-between mt-8">
             <button
               onClick={handlePrevious}
-              className={`px-6 py-2 uppercase text-sm font-bold ${
+              className={`px-6 py-2 cursor-pointer uppercase text-sm font-bold ${
                 currentStep === 1 ? "bg-gray-400 cursor-not-allowed" : "bg-[#FFE4A8] hover:bg-[#FFE4A8]/80"
               }`}
               disabled={currentStep === 1}
@@ -380,7 +388,7 @@ export default function MultiStepForm() {
             </button>
             <button
               onClick={handleNext}
-              className="px-6 py-2 bg-[#FFE4A8] hover:bg-[#FFE4A8]/80 uppercase text-sm font-bold text-black"
+              className="px-6 py-2 cursor-pointer bg-[#FFE4A8] hover:bg-[#FFE4A8]/80 uppercase text-sm font-bold text-black"
             >
               {currentStep === 6 ? "Save & View" : "Next"}
             </button>
@@ -395,7 +403,7 @@ export default function MultiStepForm() {
         {/* Save Modal */}
         {showSaveModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-black border border-gray-700 p-8 rounded-lg max-w-md w-full mx-4">
+            <div className="bg-black border border-gray-700 p-8 rounded-lg max-w-lg w-full mx-4">
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold mb-6 text-white">Save & Share</h2>
 

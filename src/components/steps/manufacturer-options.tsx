@@ -25,12 +25,14 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
   const [loading, setLoading] = useState(true)
   const optionsContainerRef = useRef<HTMLDivElement>(null)
 
+  const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
+
   // Fetch manufacturer options from API
   useEffect(() => {
     const fetchOptions = async () => {
       try {
         setLoading(true)
-        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
         // Add timeout and better error handling
         const controller = new AbortController()
@@ -109,6 +111,13 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
     name: categoryName.toUpperCase(),
   }))
 
+  // Auto-select first category when categories are available
+  useEffect(() => {
+    if (categories.length > 0 && !openCategory) {
+      setOpenCategory(categories[0].id)
+    }
+  }, [categories, openCategory])
+
   // Initialize or get the manufacturer options from formData
   const manufacturerOptions: ManufacturerOptionsData =
     typeof formData.manufacturerOptions === "object" &&
@@ -140,7 +149,7 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
   }
 
   // Calculate total price of selected options
-  const calculateTotalPrice = () => {
+  const calculateManufacturerOptionsPrice = () => {
     let total = 0
     Object.keys(manufacturerOptions).forEach((optionId) => {
       if (manufacturerOptions[optionId]) {
@@ -153,10 +162,9 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
     return total
   }
 
-  const basePrice = 79500
-  const totalOptionsPrice = calculateTotalPrice()
-  const totalPrice = basePrice + totalOptionsPrice
-  const baseUrl = "https://ben10.scaleupdevagency.com"
+  const manufacturerOptionsPrice = calculateManufacturerOptionsPrice()
+  const totalPrice = basePrice + manufacturerOptionsPrice
+  const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
   if (loading) {
     return (
@@ -254,7 +262,7 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
             <div className="mt-8 pt-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">Base Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${basePrice.toLocaleString()}</span>
+                <span>${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}</span>
               </div>
 
               <div className="space-y-1 mt-2 text-xs text-gray-400 text-start">
@@ -270,7 +278,7 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
 
               <div className="mt-4 flex justify-between items-center">
                 <h3 className="font-bold">Manufacturer Options</h3>
-                <span className="font-bold text-[#FFE4A8]">${totalOptionsPrice.toFixed(2)}</span>
+                <span className="font-bold text-[#FFE4A8]">${manufacturerOptionsPrice.toFixed(2)}</span>
               </div>
 
               <div className="text-xs space-y-1 text-gray-400 text-start pt-2">
@@ -301,7 +309,7 @@ export default function ManufacturerOptions({ formData, updateFormData }: StepPr
 
               <div className="mt-4 pt-4 border-t border-gray-700 flex justify-between items-center">
                 <h3 className="font-bold text-start">Estimated Total Build Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${totalPrice.toLocaleString()}</span>
+                <span>${totalPrice.toLocaleString()}</span>
               </div>
             </div>
           </div>

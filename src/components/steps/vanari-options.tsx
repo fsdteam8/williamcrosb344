@@ -30,7 +30,7 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
     const fetchOptions = async () => {
       try {
         setLoading(true)
-        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
         // Add timeout and better error handling
         const controller = new AbortController()
@@ -99,6 +99,13 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
     name: categoryName.toUpperCase(),
   }))
 
+  // Auto-select first category when categories are available
+  useEffect(() => {
+    if (categories.length > 0 && !openCategory) {
+      setOpenCategory(categories[0].id)
+    }
+  }, [categories, openCategory])
+
   // Initialize or get the vanari options from formData
   const vanariOptions: VanariOptionsData =
     typeof formData.vanariOptions === "object" &&
@@ -126,7 +133,7 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
   }
 
   // Calculate total price of selected options
-  const calculateTotalPrice = () => {
+  const calculateVanariOptionsPrice = () => {
     let total = 0
     Object.keys(vanariOptions).forEach((optionId) => {
       if (vanariOptions[optionId]) {
@@ -139,10 +146,10 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
     return total
   }
 
-  const basePrice = 79500
-  const totalOptionsPrice = calculateTotalPrice()
-  const totalPrice = basePrice + totalOptionsPrice
-  const baseUrl = "https://ben10.scaleupdevagency.com"
+  const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
+  const vanariOptionsPrice = calculateVanariOptionsPrice()
+  const totalPrice = basePrice + vanariOptionsPrice
+  const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
   if (loading) {
     return (
@@ -235,7 +242,7 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
             <div className="mt-8 pt-4 border-t border-gray-700">
               <div className="flex justify-between items-center">
                 <h3 className="font-bold">Base Price</h3>
-                <span className="text-xl font-bold text-[#FFE4A8]">${basePrice.toLocaleString()}</span>
+                <span>${Number.parseFloat(formData.modelData?.base_price || "79500").toLocaleString()}</span>
               </div>
               <div className="space-y-1 mt-2 text-xs text-gray-400 text-start">
                 <p>Hot Dip Galvanised Chassis (orders placed from 14/09/23 onwards)</p>
@@ -249,7 +256,7 @@ export default function VanariOptions({ formData, updateFormData }: StepProps) {
               </div>
               <div className="mt-4 flex justify-between items-center">
                 <h3 className="font-bold">Vanari Options</h3>
-                <span className="font-bold text-[#FFE4A8]">${totalOptionsPrice.toFixed(2)}</span>
+                <span className="font-bold text-[#FFE4A8]">${vanariOptionsPrice.toFixed(2)}</span>
               </div>
               <div className="text-xs space-y-1 text-gray-400 text-start pt-2">
                 {Object.keys(vanariOptions).length === 0 ? (

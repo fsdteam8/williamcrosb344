@@ -53,6 +53,8 @@ function ModelTheme() {
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null)
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
 
+  console.log(setViewMode)
+
   const itemsPerPage = 10
 
   const getAuthToken = () => {
@@ -231,7 +233,7 @@ function ModelTheme() {
           <h1 className="text-2xl font-bold">Themes</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Themes</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Theme
         </Button>
       </div>

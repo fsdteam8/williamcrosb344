@@ -1,8 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Download, Edit } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import axios from "axios"
@@ -56,13 +54,9 @@ export function ThemeDetails({ open, onOpenChange, themeId }: ThemeDetailsProps)
     return config
   })
 
-  useEffect(() => {
-    if (open && themeId) {
-      fetchThemeDetails()
-    }
-  }, [open, themeId])
+ 
 
-  const fetchThemeDetails = async () => {
+  const fetchThemeDetails = useCallback(async () => {
     if (!themeId) return
 
     setLoading(true)
@@ -74,7 +68,13 @@ export function ThemeDetails({ open, onOpenChange, themeId }: ThemeDetailsProps)
     } finally {
       setLoading(false)
     }
-  }
+  }, [themeId]) // Add all dependencies used inside the callback
+
+   useEffect(() => {
+    if (open && themeId) {
+      fetchThemeDetails()
+    }
+  }, [open, themeId, fetchThemeDetails])
 
 
   const getImageUrl = (imagePath: string) => {

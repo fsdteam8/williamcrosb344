@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { ModelCategory, VehicleModel, FormData } from "@/lib/types"
 
 interface ModelSelectionProps {
-  formData: any
-  updateFormData: (field: keyof FormData, value: any) => void
+  formData: FormData
+  updateFormData: <K extends keyof FormData>(field: K, value: FormData[K]) => void
   modelCategories: ModelCategory[]
   vehicleModels: VehicleModel[]
 }
@@ -18,22 +18,26 @@ export default function ModelSelection({
 }: ModelSelectionProps) {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
 
+  console.log(selectedCategory)
+
+  const handleModelSelect = useCallback(
+    (model: VehicleModel) => {
+      updateFormData("model", model.name)
+      updateFormData("modelData", model)
+    },
+    [updateFormData],
+  )
+
   // Add this useEffect after the existing useState declarations
   useEffect(() => {
     // Auto-select first model if none is selected and models are available
     if (!formData.model && vehicleModels.length > 0) {
-      const firstModel = vehicleModels[0]
-      handleModelSelect(firstModel)
+      handleModelSelect(vehicleModels[0])
     }
-  }, [vehicleModels, formData.model])
+  }, [vehicleModels, formData.model, handleModelSelect])
 
   const handleCategorySelect = (categoryId: number) => {
     setSelectedCategory(categoryId)
-  }
-
-  const handleModelSelect = (model: VehicleModel) => {
-    updateFormData("model", model.name)
-    updateFormData("modelData", model)
   }
 
   // Group models by category
@@ -84,7 +88,7 @@ export default function ModelSelection({
                 <img
                   src={
                     selectedModel.inner_image
-                      ? `https://ben10.scaleupdevagency.com/${selectedModel.inner_image}`
+                      ? `${import.meta.env.VITE_BACKEND_URL}/${selectedModel.inner_image}`
                       : "/placeholder.svg?height=300&width=500"
                   }
                   alt={selectedModel.name}
@@ -98,25 +102,25 @@ export default function ModelSelection({
               <div className="grid grid-cols-4 gap-4 mt-8">
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/placeholder.svg?height=40&width=40" alt="Refrigerator" width={40} height={40} />
+                    <img src="/assets/ref-icon.svg" alt="Refrigerator" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Refrigerator</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/placeholder.svg?height=40&width=40" alt="Sleeps" width={40} height={40} />
+                    <img src="/assets/sleeps-icon.svg" alt="Sleeps" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Sleeps {selectedModel.sleep_person}</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/placeholder.svg?height=40&width=40" alt="Shower" width={40} height={40} />
+                    <img src="/assets/shower-icon.svg" alt="Shower" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Shower</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="w-10 h-10 flex items-center justify-center">
-                    <img src="/placeholder.svg?height=40&width=40" alt="Toilet" width={40} height={40} />
+                    <img src="/assets/toilet.svg" alt="Toilet" width={40} height={40} />
                   </div>
                   <span className="text-xs mt-1 text-white">Toilet</span>
                 </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Search, Plus, Pencil, Trash2, ChevronRight, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -43,20 +43,19 @@ export default function ModelCategory() {
 
   const itemsPerPage = 10
 
-  const getAuthToken = () => {
-    return localStorage.getItem("authToken"); // Must match the key used in setItem
-  };
 
   // Log the token (either by storing it first or directly logging the function call)
   // const token = getAuthToken();
   // console.log(token)
 
 
-  useEffect(() => {
-    fetchCategories()
-  }, [currentPage])
+ 
 
-  const fetchCategories = async () => {
+  const getAuthToken = useCallback(() => {
+    return localStorage.getItem("authToken")
+  }, [])
+
+  const fetchCategories = useCallback(async () => {
     setLoading(true)
     try {
       const token = getAuthToken()
@@ -84,7 +83,15 @@ export default function ModelCategory() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, getAuthToken]) // Include all dependencies used in the callback
+
+  useEffect(() => {
+    fetchCategories()
+  }, [currentPage, fetchCategories])
+
+   useEffect(() => {
+    fetchCategories()
+  }, [currentPage, fetchCategories])
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value)
@@ -241,7 +248,7 @@ export default function ModelCategory() {
           <h1 className="text-2xl font-bold">Categories</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Categories</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Category
         </Button>
       </div>

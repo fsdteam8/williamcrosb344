@@ -24,7 +24,7 @@ interface Category {
 interface CategoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { name: string }) => Promise<any>;
+  onSubmit: (data: { name: string }) => Promise<unknown>; // Changed from Promise<any>
   initialData?: Category;
 }
 
@@ -104,7 +104,7 @@ export function CategoryForm({ open, onOpenChange, onSubmit, initialData }: Cate
             <Button
               type="submit"
               disabled={isSubmitting || !formData.name.trim()}
-              className="bg-red-500 hover:bg-red-600"
+              className="cursor-pointer"
             >
               {isSubmitting ? "Saving..." : initialData ? "Update" : "Create"}
             </Button>

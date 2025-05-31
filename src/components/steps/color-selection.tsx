@@ -1,14 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import type { StepProps, Theme, ThemeWiseImage } from "@/lib/types"
+import { useState, useEffect, useCallback } from "react"
+import type { StepProps, Theme, ThemeWiseImage, ColorSelectionData } from "@/lib/types"
 
-interface ColorSelectionData {
-  themeId?: number
-  themeName?: string
-  themeImage?: string
-  selectedTheme?: Theme // Pass the complete theme object
-}
+// interface ColorSelectionData {
+//   themeId?: number
+//   themeName?: string
+//   themeImage?: string
+//   selectedTheme?: Theme
+//   code?: number | string
+//   status?: string
+// }
 
 export default function ColorSelection({ formData, updateFormData }: StepProps) {
   const [themes, setThemes] = useState<Theme[]>([])
@@ -20,6 +22,20 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
       ? (formData.color as ColorSelectionData)
       : ({} as ColorSelectionData)
 
+  const handleThemeSelect = useCallback(
+    (theme: Theme) => {
+      updateFormData("color", {
+        color1: null,
+        color2: null,
+        status: "",
+        themeId: theme.id,
+        themeName: theme.name,
+        selectedTheme: theme,
+      })
+    },
+    [updateFormData],
+  )
+
   // Fetch themes on component mount
   useEffect(() => {
     const fetchThemes = async () => {
@@ -27,57 +43,14 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
         setLoading(true)
 
         // Fallback themes that match the actual API structure
-        const fallbackThemes: Theme[] = [
-          {
-            id: 10,
-            name: "Coastal Luxe",
-            image: "uploads/1748406687_SRC16-Snowy-River-Caravans-LRV231154-Theme-3.png",
-            flooring_name: "Flooring - Montreal VFT10120507",
-            flooring_image: "uploads/1748406687_Montreal-VFT10120507-1.jpg",
-            cabinetry_1_name: "All Cabinetry - White 0949",
-            cabinetry_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
-            table_top_1_name: "Benchtops - Aged Ash 8844D8",
-            table_top_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
-            seating_1_name: "Fabric - Kiama Cobblestone S213 75A-1",
-            seating_1_image: "uploads/1748405007_Kiama-Cobblestone-S213-75A-1-1.jpg",
-            seating_2_name: "Leather - Taupe 0621-B",
-            seating_2_image: "uploads/1748405007_Taupe-0621-B.jpg",
-            cabinetry_2_name: "All Cabinetry - White 0949",
-            cabinetry_2_image: "uploads/1748405007_White-0949-2.jpg",
-            table_top_2_name: "Splashback - White 0949",
-            table_top_2_image: "uploads/1748405007_White-0949-2.jpg",
-            created_at: "2025-05-28T04:03:27.000000Z",
-            updated_at: "2025-05-28T04:31:27.000000Z",
-          },
-          {
-            id: 11,
-            name: "Grey Oasis",
-            image: "uploads/1748409412_localhost_5173_ (2).png",
-            flooring_name: "Alana Sutton",
-            flooring_image: "uploads/1748409412_localhost_5173_ (5).png",
-            cabinetry_1_name: "Yoshi Stuart",
-            cabinetry_1_image: "uploads/1748409412_localhost_5173_dashboard.png",
-            table_top_1_name: "Rana Wilkerson",
-            table_top_1_image: "uploads/1748409412_localhost_5173_ (1).png",
-            seating_1_name: "Fletcher Good",
-            seating_1_image: "uploads/1748409412_localhost_5173_ (5).png",
-            seating_2_name: "Xantha Craft",
-            seating_2_image: "uploads/1748409412_localhost_5173_dashboard (2).png",
-            cabinetry_2_name: "Knox Winters",
-            cabinetry_2_image: "uploads/1748409412_localhost_5173_ (5).png",
-            table_top_2_name: "Illiana Levine",
-            table_top_2_image: "uploads/1748409412_localhost_5173_dashboard.png",
-            created_at: "2025-05-28T05:16:52.000000Z",
-            updated_at: "2025-05-28T05:16:52.000000Z",
-          },
-        ]
+
 
         try {
           // Try to fetch from API with timeout
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
-          const response = await fetch("https://ben10.scaleupdevagency.com/api/themes", {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/themes`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -108,71 +81,18 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
         } catch (apiError) {
           console.warn("API fetch failed, using fallback themes:", apiError)
           // Use fallback themes that match the actual API structure
-          setThemes(fallbackThemes)
-          if (!color.themeId) {
-            handleThemeSelect(fallbackThemes[0])
-          }
         }
 
         setLoading(false)
       } catch (error) {
         console.error("Error in fetchThemes:", error)
-        // Use fallback data on any error
-        const fallbackThemes: Theme[] = [
-          {
-            id: 10,
-            name: "Coastal Luxe",
-            image: "uploads/1748406687_SRC16-Snowy-River-Caravans-LRV231154-Theme-3.png",
-            flooring_name: "Flooring - Montreal VFT10120507",
-            flooring_image: "uploads/1748406687_Montreal-VFT10120507-1.jpg",
-            cabinetry_1_name: "All Cabinetry - White 0949",
-            cabinetry_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
-            table_top_1_name: "Benchtops - Aged Ash 8844D8",
-            table_top_1_image: "uploads/1748405007_Montreal-VFT10120507-1.jpg",
-            seating_1_name: "Fabric - Kiama Cobblestone S213 75A-1",
-            seating_1_image: "uploads/1748405007_Kiama-Cobblestone-S213-75A-1-1.jpg",
-            seating_2_name: "Leather - Taupe 0621-B",
-            seating_2_image: "uploads/1748405007_Taupe-0621-B.jpg",
-            cabinetry_2_name: "All Cabinetry - White 0949",
-            cabinetry_2_image: "uploads/1748405007_White-0949-2.jpg",
-            table_top_2_name: "Splashback - White 0949",
-            table_top_2_image: "uploads/1748405007_White-0949-2.jpg",
-            created_at: "2025-05-28T04:03:27.000000Z",
-            updated_at: "2025-05-28T04:31:27.000000Z",
-          },
-          {
-            id: 11,
-            name: "Grey Oasis",
-            image: "uploads/1748409412_localhost_5173_ (2).png",
-            flooring_name: "Alana Sutton",
-            flooring_image: "uploads/1748409412_localhost_5173_ (5).png",
-            cabinetry_1_name: "Yoshi Stuart",
-            cabinetry_1_image: "uploads/1748409412_localhost_5173_dashboard.png",
-            table_top_1_name: "Rana Wilkerson",
-            table_top_1_image: "uploads/1748409412_localhost_5173_ (1).png",
-            seating_1_name: "Fletcher Good",
-            seating_1_image: "uploads/1748409412_localhost_5173_ (5).png",
-            seating_2_name: "Xantha Craft",
-            seating_2_image: "uploads/1748409412_localhost_5173_dashboard (2).png",
-            cabinetry_2_name: "Knox Winters",
-            cabinetry_2_image: "uploads/1748409412_localhost_5173_ (5).png",
-            table_top_2_name: "Illiana Levine",
-            table_top_2_image: "uploads/1748409412_localhost_5173_dashboard.png",
-            created_at: "2025-05-28T05:16:52.000000Z",
-            updated_at: "2025-05-28T05:16:52.000000Z",
-          },
-        ]
 
-        setThemes(fallbackThemes)
-        if (!color.themeId) {
-          handleThemeSelect(fallbackThemes[0])
-        }
         setLoading(false)
       }
     }
 
     fetchThemes()
-  }, [])
+  }, [handleThemeSelect, color.themeId])
 
   // Fetch theme-wise image when theme or model changes
   useEffect(() => {
@@ -183,7 +103,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
           const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
 
           const response = await fetch(
-            `https://ben10.scaleupdevagency.com/api/model-theme-wise-image?model_id=${formData.modelData.id}&theme_id=${color.themeId}`,
+            `${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image?model_id=${formData.modelData.id}&theme_id=${color.themeId}`,
             {
               method: "GET",
               headers: {
@@ -218,18 +138,8 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
     fetchThemeWiseImage()
   }, [color.themeId, formData.modelData?.id])
 
-  const handleThemeSelect = (theme: Theme) => {
-    const colorData: ColorSelectionData = {
-      themeId: theme.id,
-      themeName: theme.name,
-      themeImage: theme.image,
-      selectedTheme: theme, // Pass the complete theme object
-    }
-    updateFormData("color", colorData)
-  }
-
   const selectedTheme = themes.find((t) => t.id === color.themeId)
-  const baseUrl = "https://ben10.scaleupdevagency.com"
+  const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
   if (loading) {
     return (
@@ -249,9 +159,8 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
             <button
               key={theme.id}
               onClick={() => handleThemeSelect(theme)}
-              className={`py-2 px-3 text-sm text-center rounded ${
-                color.themeId === theme.id ? "bg-[#FFE4A8] text-black" : "bg-[#1e1e1e] text-white hover:bg-[#333]"
-              }`}
+              className={`py-2 px-3 text-sm text-center rounded ${color.themeId === theme.id ? "bg-[#FFE4A8] text-black" : "bg-[#1e1e1e] text-white hover:bg-[#333]"
+                }`}
             >
               {theme.name}
             </button>
@@ -276,7 +185,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.flooring_name}
                         className="w-24 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=96&query=wood flooring sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=96"
                         }}
                       />
                     </div>
@@ -300,7 +209,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.cabinetry_1_name}
                         className="w-24 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=96&query=white cabinet sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=96"
                         }}
                       />
                     </div>
@@ -315,7 +224,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
               {/* Tabletop and Splashback */}
               <div>
-                <h3 className="uppercase font-bold mb-8">Tabletop and Splashback</h3>
+                <h3 className="lg:text-center font-bold mb-8">Tabletop and Splashback</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
                     <div className="border-2 border-[#FFD700]">
@@ -324,7 +233,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.table_top_1_name}
                         className="w-20 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=benchtop sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80"
                         }}
                       />
                     </div>
@@ -341,7 +250,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.table_top_2_name}
                         className="w-20 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=splashback sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80"
                         }}
                       />
                     </div>
@@ -356,7 +265,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
 
               {/* Seating and Headboard */}
               <div>
-                <h3 className="uppercase font-bold mb-4">Seating and Headboard</h3>
+                <h3 className="lg:text-center font-bold mb-4">Seating and Headboard</h3>
                 <div className="flex justify-center gap-2">
                   <div className="flex flex-col items-center">
                     <div className="border-2 border-[#FFD700]">
@@ -365,7 +274,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.seating_1_name}
                         className="w-20 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=fabric sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80"
                         }}
                       />
                     </div>
@@ -382,7 +291,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.seating_2_name}
                         className="w-20 h-20 object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=80&width=80&query=leather sample"
+                          e.currentTarget.src = "/placeholder.svg?height=80&width=80"
                         }}
                       />
                     </div>
@@ -421,17 +330,28 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                   src={`${baseUrl}/${themeWiseImage.image}`}
                   alt={`${selectedTheme.name} Interior Preview`}
                   className="w-full object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder.svg?height=300&width=500&query=caravan interior"
-                  }}
                 />
               ) : (
                 <img
-                  src="/placeholder.svg?height=300&width=500&query=caravan interior"
+                  src="/placeholder.svg?height=300&width=500"
                   alt="Interior Preview"
-                  className="w-full object-contain"
+                  className="w-full object-contain transition-transform duration-300 group-hover:scale-110"
                 />
               )}
+
+              {/* Zoom indicator overlay */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                <div className="w-16 h-16 border-2 border-white rounded-full flex items-center justify-center bg-black bg-opacity-50">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3 text-sm">
@@ -445,7 +365,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.flooring_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=flooring sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>
@@ -459,7 +379,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.cabinetry_1_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=cabinet sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>
@@ -473,7 +393,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.table_top_1_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=benchtop sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>
@@ -487,7 +407,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.table_top_2_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=splashback sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>
@@ -501,7 +421,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.seating_1_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=fabric sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>
@@ -515,7 +435,7 @@ export default function ColorSelection({ formData, updateFormData }: StepProps) 
                         alt={selectedTheme.seating_2_name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg?height=24&width=24&query=leather sample"
+                          e.currentTarget.src = "/placeholder.svg?height=24&width=24"
                         }}
                       />
                     </div>

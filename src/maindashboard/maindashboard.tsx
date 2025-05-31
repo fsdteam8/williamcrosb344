@@ -101,24 +101,18 @@ export default function MainDashboard() {
     }
   }
 
-  const handleAddModel = async (data: any) => {
+  const handleAddModel = async (data: FormData) => {
     try {
       const token = getAuthToken()
-
-      // Check if data is FormData (has file) or regular object
-      const isFormData = data instanceof FormData
 
       const requestOptions: RequestInit = {
         method: "POST",
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
-          ...(!isFormData && { "Content-Type": "application/json" }),
+          // Do not set Content-Type for FormData, browser will set it
         },
-        body: isFormData ? data : JSON.stringify(data),
+        body: data,
       }
-
-      console.log("Request options:", requestOptions)
-      console.log("Data being sent:", isFormData ? "FormData (check network tab)" : data)
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models`, requestOptions)
 
@@ -129,8 +123,6 @@ export default function MainDashboard() {
       }
 
       const responseData = await response.json()
-      console.log("API Response:", responseData)
-
       fetchModels()
       setIsAddModalOpen(false)
       toast.success("Model created successfully")
@@ -266,7 +258,7 @@ export default function MainDashboard() {
           <h1 className="text-2xl font-bold">Model</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Model</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Model
         </Button>
       </div>

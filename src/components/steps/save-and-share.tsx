@@ -2,21 +2,84 @@
 
 import type { StepProps } from "@/lib/types"
 import { useState, useEffect } from "react"
+import CaravanCarousel from "../CaravanCarousel"
 
-export default function SaveAndShare({ formData, updateFormData }: StepProps) {
-  const [manufacturerOptions, setManufacturerOptions] = useState<any[]>([])
-  const [vanariOptions, setVanariOptions] = useState<any[]>([])
+interface ExternalOptionsData {
+  baseColor?: string
+  baseColorId?: number
+  decalColor?: string
+  decalColorId?: number
+  colorTypes?: string[]
+}
+
+interface ColorItem {
+  id: string
+  colorId: number
+  name: string
+  image: string
+  image2?: string
+}
+
+interface AdditionalOption {
+  id: number
+  name: string
+  price: string
+  vehicle_model_id: number
+  category_name: string
+  type: string
+  created_at: string
+  updated_at: string
+}
+
+export default function SaveAndShare({ formData }: StepProps) {
+  const [manufacturerOptions, setManufacturerOptions] = useState<AdditionalOption[]>([])
+  const [vanariOptions, setVanariOptions] = useState<AdditionalOption[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [orderResponse, setOrderResponse] = useState<any>(null)
+  const [colorsLoading, setColorsLoading] = useState(false)
+
+  // Add state for colors
+  const [baseColors, setBaseColors] = useState<ColorItem[]>([])
+  const [decalColors, setDecalColors] = useState<ColorItem[]>([])
+  const [modelColorImages, setModelColorImages] = useState<ColorItem[]>([])
+
+  // Add function to get caravan images
+  const getCaravanImages = (): string[] => {
+    if (modelColorImages.length > 0) {
+      const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+      const images: string[] = []
+
+      modelColorImages.forEach((img: ColorItem) => {
+        if (img.image) {
+          images.push(`${baseUrl}/${img.image}`)
+        }
+        if (img.image2) {
+          images.push(`${baseUrl}/${img.image2}`)
+        }
+      })
+
+      return images.length > 0
+        ? images
+        : [
+            "/placeholder.svg?height=300&width=500",
+            "/placeholder.svg?height=300&width=500",
+            "/placeholder.svg?height=300&width=500",
+          ]
+    }
+
+    return [
+      "/placeholder.svg?height=300&width=500",
+      "/placeholder.svg?height=300&width=500",
+      "/placeholder.svg?height=300&width=500",
+    ]
+  }
 
   // Fetch options data to display selected items
   useEffect(() => {
     const fetchOptionsData = async () => {
       try {
         setLoading(true)
-        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
         // Fetch manufacturer options
         const manufacturerResponse = await fetch(`${baseUrl}/api/addtional-options?type=Manufacturer Options`)
@@ -42,87 +105,90 @@ export default function SaveAndShare({ formData, updateFormData }: StepProps) {
     fetchOptionsData()
   }, [])
 
-  const handleInputChange = (field: string, value: string) => {
-    updateFormData("contactInfo", {
-      ...formData.contactInfo,
-      [field]: value,
-    })
-  }
+  // Add this useEffect to fetch colors
+  useEffect(() => {
+    const fetchColors = async () => {
+      try {
+        setColorsLoading(true)
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+        const response = await fetch(`${baseUrl}/api/colors?type_wise=type_wise`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
 
-  const handleSaveAndView = async () => {
-    try {
-      setSaving(true)
+        if (response.ok) {
+          const data = await response.json()
 
-      // Prepare order data
-      const orderData = {
-        // Customer Information
-        first_name: formData.contactInfo?.firstName || "",
-        last_name: formData.contactInfo?.lastName || "",
-        email: formData.contactInfo?.email || "",
-        phone: formData.contactInfo?.phone || "",
-        postal_code: formData.contactInfo?.postalCode || "",
+          // Extract base colors and decal colors from API response
+          const baseColorsData = data["External Base Colours"] || []
+          const decalColorsData = data["External Decals Colours"] || []
 
-        // Model Information
-        vehicle_model_id: formData.modelData?.id || null,
-        model_name: formData.modelData?.name || "",
+          // Transform API data to match component structure
+          const transformedBaseColors = baseColorsData.map((color: ColorItem) => ({
+            id: color.name.toLowerCase().replace(/\s+/g, "-"),
+            colorId: color.id,
+            name: color.name,
+            image: `${baseUrl}/${color.image}`,
+          }))
 
-        // Theme/Color Information
-        theme_id: formData.color?.themeId || null,
-        theme_name: formData.color?.themeName || "",
+          const transformedDecalColors = decalColorsData.map((color: ColorItem) => ({
+            id: color.name.toLowerCase().replace(/\s+/g, "-"),
+            colorId: color.id,
+            name: color.name,
+            image: `${baseUrl}/${color.image}`,
+          }))
 
-        // External Colors
-        base_color_id: formData.externalOptions?.baseColorId || null,
-        base_color_name: formData.externalOptions?.baseColor || "",
-        decal_color_id: formData.externalOptions?.decalColorId || null,
-        decal_color_name: formData.externalOptions?.decalColor || "",
-
-        // Selected Options
-        manufacturer_options: Object.keys(formData.manufacturerOptions || {})
-          .filter((optionId) => formData.manufacturerOptions[optionId])
-          .map((optionId) => Number.parseInt(optionId)),
-
-        vanari_options: Object.keys(formData.vanariOptions || {})
-          .filter((optionId) => formData.vanariOptions[optionId])
-          .map((optionId) => Number.parseInt(optionId)),
-
-        // Pricing
-        base_price: Number.parseFloat(formData.modelData?.base_price || "79500"),
-        manufacturer_options_price: calculateManufacturerOptionsPrice(),
-        vanari_options_price: calculateVanariOptionsPrice(),
-        total_price: calculateTotalPrice(),
-
-        // Additional metadata
-        configuration_data: JSON.stringify(formData),
+          setBaseColors(transformedBaseColors)
+          setDecalColors(transformedDecalColors)
+        }
+      } catch (error) {
+        console.warn("Error fetching colors:", error)
+      } finally {
+        setColorsLoading(false)
       }
-
-      console.log("Sending order data:", orderData)
-
-      // Post to API
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(orderData),
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        console.log("Order saved successfully:", result)
-        setOrderResponse(result)
-        setShowModal(true)
-      } else {
-        const errorData = await response.json()
-        console.error("Failed to save order:", errorData)
-        alert("Failed to save configuration. Please try again.")
-      }
-    } catch (error) {
-      console.error("Error saving order:", error)
-      alert("An error occurred while saving. Please try again.")
-    } finally {
-      setSaving(false)
     }
-  }
+
+    fetchColors()
+  }, [])
+
+  // Fetch model-color-wise images when colors change
+  useEffect(() => {
+    const fetchModelColorImages = async () => {
+      const externalOptions = formData.externalOptions as ExternalOptionsData
+      if (externalOptions?.baseColorId && externalOptions?.decalColorId && formData.modelData?.id) {
+        try {
+          const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+          const response = await fetch(
+            `${baseUrl}/api/model-color-wise-image?model_id=${formData.modelData.id}&color_1_id=${externalOptions.baseColorId}&color_2_id=${externalOptions.decalColorId}`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            },
+          )
+
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.data?.data) {
+              setModelColorImages(data.data.data)
+            } else {
+              setModelColorImages([])
+            }
+          } else {
+            setModelColorImages([])
+          }
+        } catch (error) {
+          console.warn("Error fetching model color images:", error)
+          setModelColorImages([])
+        }
+      }
+    }
+
+    fetchModelColorImages()
+  }, [formData.externalOptions, formData.modelData?.id])
 
   // Calculate pricing
   const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
@@ -165,8 +231,11 @@ export default function SaveAndShare({ formData, updateFormData }: StepProps) {
   const vanariOptionsPrice = calculateVanariOptionsPrice()
   const totalPrice = calculateTotalPrice()
 
-  const baseUrl = "https://ben10.scaleupdevagency.com"
-  const selectedTheme = formData.color?.selectedTheme
+  const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+  const selectedTheme = formData.color?.selectedTheme || null
+
+  console.log(selectedTheme, "selectedTheme")
+  const externalOptions = (formData.externalOptions as ExternalOptionsData) || {}
 
   return (
     <>
@@ -190,21 +259,47 @@ export default function SaveAndShare({ formData, updateFormData }: StepProps) {
                 <h3 className="text-white font-bold">Your New {formData.modelData?.name || "SRC-14"}</h3>
               </div>
 
+              {!loading && !colorsLoading && (
+                <div className="aspect-video relative mb-6">
+                  <CaravanCarousel
+                    images={getCaravanImages()}
+                    baseColor={externalOptions.baseColor || "silver"}
+                    decalColor={externalOptions.decalColor || "snowy-teal"}
+                  />
+                </div>
+              )}
+
               {/* Exterior Colors */}
-              <div className="space-y-3">
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">External Base Colour</span>
+                  <span className="text-start">External Base Colour</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Silver</span>
-                    <div className="w-4 h-4 bg-gray-300 border border-gray-600"></div>
+                    <span className="capitalize">
+                      {baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
+                    </span>
+                    <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={baseColors.find((c) => c.id === externalOptions.baseColor)?.image || "/placeholder.svg"}
+                        alt={baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">External Decals Colour</span>
+                  <span className="text-start">External Decals Colour</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">Snowy Teal</span>
-                    <div className="w-4 h-4 bg-teal-500 border border-gray-600"></div>
+                    <span className="capitalize">
+                      {decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
+                    </span>
+                    <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
+                      <img
+                        src={decalColors.find((c) => c.id === externalOptions.decalColor)?.image || "/placeholder.svg"}
+                        alt={decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -216,9 +311,6 @@ export default function SaveAndShare({ formData, updateFormData }: StepProps) {
                     src={`${baseUrl}/${selectedTheme.image}`}
                     alt="Interior Preview"
                     className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.svg?height=200&width=300"
-                    }}
                   />
                 ) : (
                   <img
@@ -370,39 +462,6 @@ export default function SaveAndShare({ formData, updateFormData }: StepProps) {
               <h2 className="text-2xl font-bold text-green-600 mb-2">Configuration Saved Successfully!</h2>
               <p className="text-gray-600">Your caravan configuration has been saved and submitted.</p>
             </div>
-
-            {orderResponse && (
-              <div className="space-y-4 text-sm">
-                <div className="bg-gray-100 p-4 rounded">
-                  <h3 className="font-bold mb-2">Order Details:</h3>
-                  <p>
-                    <strong>Order ID:</strong> {orderResponse.data?.id || "N/A"}
-                  </p>
-                  <p>
-                    <strong>Customer:</strong> {formData.contactInfo?.firstName} {formData.contactInfo?.lastName}
-                  </p>
-                  <p>
-                    <strong>Email:</strong> {formData.contactInfo?.email}
-                  </p>
-                  <p>
-                    <strong>Model:</strong> {formData.modelData?.name}
-                  </p>
-                  <p>
-                    <strong>Total Price:</strong> ${totalPrice.toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="bg-gray-100 p-4 rounded">
-                  <h3 className="font-bold mb-2">Next Steps:</h3>
-                  <ul className="list-disc list-inside space-y-1 text-gray-700">
-                    <li>You will receive a confirmation email shortly</li>
-                    <li>Our team will contact you within 24 hours</li>
-                    <li>We'll schedule a consultation to finalize your order</li>
-                    <li>Production timeline will be provided during consultation</li>
-                  </ul>
-                </div>
-              </div>
-            )}
 
             <div className="flex gap-4 mt-6">
               <button

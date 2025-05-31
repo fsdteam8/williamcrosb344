@@ -1,9 +1,11 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { Home, User, Settings, LayoutDashboard, Menu, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Menu, X, LogOut, Car, Palette, SwatchBook, Wrench, SendHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import axios from "axios";
+
+
 
 interface LayoutProps {
   children?: ReactNode;
@@ -61,14 +63,15 @@ export default function Layout({ children }: LayoutProps) {
   // Navigation items
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/dashboard/modelcategory", icon: Home, label: "Model Category" },
-    { path: "/dashboard/modeltheme", icon: Home, label: "Model Theme" },
-    { path: "/dashboard/color", icon: Home, label: "Color" },
-    { path: "/dashboard/modelcolorwiseimage", icon: Home, label: "ModelColorWiseImage" },
-    { path: "/dashboard/modelthemewiseimage", icon: Home, label: "ModelThemeWiseImage" },
-    { path: "/dashboard/manufacturer-options", icon: Home, label: "Manufacturer Options" },
-    { path: "/dashboard/submission", icon: Home, label: "Submission" }
+    { path: "/dashboard/modelcategory", icon: Car, label: "Model Category" },
+    { path: "/dashboard/modeltheme", icon: SwatchBook, label: "Model Theme" },
+    { path: "/dashboard/modelthemewiseimage", icon: SwatchBook, label: "ModelThemeWiseImage" },
+    { path: "/dashboard/color", icon: Palette, label: "Color" },
+    { path: "/dashboard/modelcolorwiseimage", icon: Palette, label: "ModelColorWiseImage" },
+    { path: "/dashboard/manufacturer-options", icon: Wrench, label: "Manufacturer Options" },
+    { path: "/dashboard/submission", icon: SendHorizontal, label: "Submission" }
   ];
+
 
   const handleLogout = async () => {
     setError(null);

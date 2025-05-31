@@ -34,7 +34,7 @@ interface ThemeFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   initialData?: Theme
-  onSubmit: (data: FormData) => Promise<any>
+  onSubmit: (data: FormData) => Promise<void>
 }
 
 interface ImagePreview {
@@ -123,7 +123,7 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
         seating_2_image: { file: null, preview: "" },
       })
     }
-  }, [initialData, open])
+  }, [initialData, open, images])
 
   const handleInputChange = (field: keyof Theme, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -260,7 +260,6 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
                     
                   />
                 </div>
-                <ImageUploadField label="Theme Image" field="image"  />
               </div>
             </div>
           </div>
@@ -336,7 +335,7 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
           <Card>
             <CardContent className="p-4 space-y-4">
               <h3 className="font-semibold">Table Top Options</h3>
-              <div className="space-y-6">
+              <div className="space-y-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Table Top 1 */}
                 <div>
                   <h4 className="font-medium mb-3">Table Top Option 1</h4>
@@ -359,7 +358,7 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
 
                 {/* Table Top 2 */}
                 <div>
-                  <h4 className="font-medium mb-3">Table Top Option 2 (Optional)</h4>
+                  <h4 className="font-medium mb-3">Table Top Option 2</h4>
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="table_top_2_name">Name</Label>
@@ -381,7 +380,7 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
           <Card>
             <CardContent className="p-4 space-y-4">
               <h3 className="font-semibold">Seating Options</h3>
-              <div className="space-y-6">
+              <div className="space-y-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Seating 1 */}
                 <div>
                   <h4 className="font-medium mb-3">Seating Option 1</h4>
@@ -403,7 +402,7 @@ export function ThemeForm({ open, onOpenChange, initialData, onSubmit }: ThemeFo
 
                 {/* Seating 2 */}
                 <div>
-                  <h4 className="font-medium mb-3">Seating Option 2 (Optional)</h4>
+                  <h4 className="font-medium mb-3">Seating Option 2</h4>
                   <div className="space-y-6">
                     <div className="space-y-2">
                       <Label htmlFor="seating_2_name">Name</Label>

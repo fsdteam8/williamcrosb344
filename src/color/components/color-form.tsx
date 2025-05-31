@@ -220,7 +220,7 @@ export function ColorForm({ open, onOpenChange, onSubmit, initialData }: ColorFo
           <div className="space-y-2">
             <Label htmlFor="image">Color Image</Label>
             <Input id="image" type="file" accept="image/*" onChange={handleFileChange} className="cursor-pointer" />
-            <p className="text-sm text-muted-foreground">Upload an image for this color (optional)</p>
+            <p className="text-sm text-muted-foreground">Upload an image for this color</p>
 
             {/* Image Preview */}
             {imagePreview && (
@@ -242,7 +242,7 @@ export function ColorForm({ open, onOpenChange, onSubmit, initialData }: ColorFo
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-red-500 hover:bg-red-600">
+            <Button type="submit" className="cursor-pointer" disabled={loading}>
               {initialData ? "Update" : "Add"} Color
             </Button>
           </div>

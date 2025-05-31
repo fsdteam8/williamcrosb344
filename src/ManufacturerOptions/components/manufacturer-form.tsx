@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -80,20 +80,17 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
   const optionTypes = ["Vanari Options", "Manufacturer Options"]
 
   // Get token from localStorage
-  const getToken = () => {
-    return localStorage.getItem("authToken") // Must match the key used in setItem
-  }
-  const token = getToken()
-  console.log(token)
+  const getToken = useCallback(() => {
+    return localStorage.getItem("authToken");
+  }, []);
 
-  // Headers with token
-  const getHeaders = () => {
+  const getHeaders = useCallback(() => {
     return {
       Authorization: `Bearer ${getToken()}`,
       "Content-Type": "application/json",
       Accept: "application/json",
-    }
-  }
+    };
+  }, [getToken]);
 
   useEffect(() => {
     if (initialData) {
@@ -117,11 +114,12 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
   }, [initialData, open])
 
   // Fetch categories
+  // Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true)
-        const response = await fetch("https://ben10.scaleupdevagency.com/api/addtional-options-category", {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options-category`, {
           headers: getHeaders(),
         })
         const data = await response.json()
@@ -139,7 +137,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
     if (open) {
       fetchCategories()
     }
-  }, [open])
+  }, [open, getHeaders]) // Added getHeaders to dependencies
 
   // Fetch vehicles when search changes
   useEffect(() => {
@@ -148,7 +146,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
         setLoadingVehicles(true)
         // If no search term, fetch all vehicles, otherwise search with the term
         const searchParam = vehicleSearch.trim() ? `?search=${vehicleSearch}` : ""
-        const response = await fetch(`https://ben10.scaleupdevagency.com/api/models${searchParam}`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models${searchParam}`, {
           headers: getHeaders(),
         })
         const data = await response.json()
@@ -171,7 +169,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
     }, 300)
 
     return () => clearTimeout(debounceTimer)
-  }, [vehicleSearch])
+  }, [vehicleSearch, getHeaders]) // Added getHeaders to dependencies
 
   // Also add an initial fetch when the vehicle dropdown opens
   useEffect(() => {
@@ -179,7 +177,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
       const fetchAllVehicles = async () => {
         try {
           setLoadingVehicles(true)
-          const response = await fetch(`https://ben10.scaleupdevagency.com/api/models`, {
+          const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models`, {
             headers: getHeaders(),
           })
           const data = await response.json()
@@ -196,7 +194,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
 
       fetchAllVehicles()
     }
-  }, [vehicleOpen])
+  }, [vehicleOpen, vehicles.length, vehicleSearch, getHeaders]) // Added all missing dependencies
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -222,7 +220,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
 
     try {
       // Send the new category to the API
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/categories", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/categories`, {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify({ name: newCategory }),
@@ -309,14 +307,14 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
       setIsSubmitting(true)
       // If we have initialData, it's an update operation
       if (initialData) {
-        await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${initialData.id}`, {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options/${initialData.id}`, {
           method: "PUT",
           headers: getHeaders(),
           body: JSON.stringify(submitData),
         })
       } else {
         // Otherwise it's a create operation
-        await fetch("https://ben10.scaleupdevagency.com/api/addtional-options", {
+        await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options`, {
           method: "POST",
           headers: getHeaders(),
           body: JSON.stringify(submitData),
@@ -583,7 +581,7 @@ export function ManufacturerForm({ open, onOpenChange, onSubmit, initialData }: 
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" className="bg-red-500 hover:bg-red-600" disabled={isSubmitting}>
+            <Button type="submit" className="cursor-pointer" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -85,7 +85,7 @@ export default function ModelThemeWiseImage() {
   const fetchModelThemeImages = async (page = 1) => {
     try {
       setLoading(true)
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-theme-wise-image?page=${page}`)
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image?page=${page}`)
       const data: ApiResponse = await response.json()
 
       if (data.success) {
@@ -145,7 +145,7 @@ export default function ModelThemeWiseImage() {
         return;
       }
 
-      const response = await fetch("https://ben10.scaleupdevagency.com/api/model-theme-wise-image", {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -164,7 +164,7 @@ export default function ModelThemeWiseImage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      
       setIsAddModalOpen(false);
       fetchModelThemeImages(currentPage);
       toast.success("Image added successfully"); // Add user feedback
@@ -200,7 +200,7 @@ export default function ModelThemeWiseImage() {
       }
 
       const response = await fetch(
-        `https://ben10.scaleupdevagency.com/api/model-theme-wise-image/${currentImage.id}?_method=PUT`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image/${currentImage.id}?_method=PUT`,
         {
           method: "POST", // Using POST with _method=PUT for Laravel-style API
           headers: {
@@ -223,7 +223,6 @@ export default function ModelThemeWiseImage() {
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
       setIsEditModalOpen(false);
       setCurrentImage(null);
       fetchModelThemeImages(currentPage);
@@ -251,7 +250,7 @@ export default function ModelThemeWiseImage() {
           // Optional: redirect to login or refresh token
           return;
         }
-        const response = await fetch(`https://ben10.scaleupdevagency.com/api/model-theme-wise-image/${id}`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image/${id}`, {
           method: "DELETE",
         })
 
@@ -270,7 +269,7 @@ export default function ModelThemeWiseImage() {
       try {
         await Promise.all(
           selectedItems.map((id) =>
-            fetch(`https://ben10.scaleupdevagency.com/api/model-theme-wise-image/${id}`, {
+            fetch(`${import.meta.env.VITE_BACKEND_URL}/api/model-theme-wise-image/${id}`, {
               method: "DELETE",
             }),
           ),
@@ -290,7 +289,7 @@ export default function ModelThemeWiseImage() {
           <h1 className="text-2xl font-bold">Model Theme Wise Images</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Model Theme Wise Images</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Image
         </Button>
       </div>
@@ -371,7 +370,7 @@ export default function ModelThemeWiseImage() {
                   <TableCell>
                     {item.image ? (
                       <img
-                        src={`https://ben10.scaleupdevagency.com/${item.image}`}
+                        src={`${import.meta.env.VITE_BACKEND_URL}/${item.image}`}
                         alt="Model Theme Image"
                         className="w-16 h-12 rounded object-cover border"
                       />

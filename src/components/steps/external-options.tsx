@@ -1,6 +1,6 @@
 "use client"
 
-import type { StepProps } from "@/lib/types"
+import type { StepProps, ModelColorWiseImage } from "@/lib/types"
 import { useState, useEffect } from "react"
 import CaravanCarousel from "../CaravanCarousel"
 
@@ -12,37 +12,20 @@ interface ExternalOptionsData {
   colorTypes?: string[]
 }
 
-interface ModelColorWiseImage {
-  id: number
-  vehicle_model_id: number
-  color_1_id: number
-  color_2_id: number
+interface ColorItem {
+  id: string
+  colorId: number
+  name: string
   image: string
-  created_at: string
-  updated_at: string
-  vehicle_model: {
-    id: number
-    name: string
-  }
-  color1: {
-    id: number
-    name: string
-  }
-  color2: {
-    id: number
-    name: string
-  }
 }
 
 export default function ExternalOptions({ formData, updateFormData }: StepProps) {
   const [colorTypes, setColorTypes] = useState<string[]>([])
   const [modelColorImages, setModelColorImages] = useState<ModelColorWiseImage[]>([])
   const [loading, setLoading] = useState(false)
-  const [baseColors, setBaseColors] = useState<any[]>([])
-  const [decalColors, setDecalColors] = useState<any[]>([])
+  const [baseColors, setBaseColors] = useState<ColorItem[]>([])
+  const [decalColors, setDecalColors] = useState<ColorItem[]>([])
   const [colorsLoading, setColorsLoading] = useState(true)
-
-  const basePrice = Number.parseFloat(formData.modelData?.base_price || "79500")
 
   const externalOptions =
     typeof formData.externalOptions === "object" && formData.externalOptions !== null
@@ -60,7 +43,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     const fetchColors = async () => {
       try {
         setColorsLoading(true)
-        const baseUrl = "https://ben10.scaleupdevagency.com"
+        const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
         const response = await fetch(`${baseUrl}/api/colors?type_wise=type_wise`, {
           method: "GET",
           headers: {
@@ -76,14 +59,14 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
           const decalColorsData = data["External Decals Colours"] || []
 
           // Transform API data to match component structure
-          const transformedBaseColors = baseColorsData.map((color: any) => ({
+          const transformedBaseColors = baseColorsData.map((color: ColorItem) => ({
             id: color.name.toLowerCase().replace(/\s+/g, "-"),
             colorId: color.id,
             name: color.name,
             image: `${baseUrl}/${color.image}`,
           }))
 
-          const transformedDecalColors = decalColorsData.map((color: any) => ({
+          const transformedDecalColors = decalColorsData.map((color: ColorItem) => ({
             id: color.name.toLowerCase().replace(/\s+/g, "-"),
             colorId: color.id,
             name: color.name,
@@ -112,20 +95,34 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     fetchColors()
   }, [])
 
+  const handleBaseColorSelect = (color: ColorItem) => {
+    handleColorSelect({
+      baseColor: color.id,
+      baseColorId: color.colorId,
+    })
+  }
+
+  const handleDecalColorSelect = (color: ColorItem) => {
+    handleColorSelect({
+      decalColor: color.id,
+      decalColorId: color.colorId,
+    })
+  }
+
   // Add this useEffect after the existing useEffect for fetching colors
   useEffect(() => {
     // Auto-select first base color if none selected and colors are available
     if (!externalOptions.baseColorId && baseColors.length > 0) {
       handleBaseColorSelect(baseColors[0])
     }
-  }, [baseColors, externalOptions.baseColorId])
+  }, [baseColors, externalOptions.baseColorId, baseColors.length, handleBaseColorSelect])
 
   useEffect(() => {
     // Auto-select first decal color if none selected and colors are available
     if (!externalOptions.decalColorId && decalColors.length > 0) {
       handleDecalColorSelect(decalColors[0])
     }
-  }, [decalColors, externalOptions.decalColorId])
+  }, [decalColors, externalOptions.decalColorId, decalColors.length, handleDecalColorSelect])
 
   const handleColorSelect = (colorData: Partial<ExternalOptionsData>) => {
     updateFormData("externalOptions", {
@@ -141,7 +138,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
       if (externalOptions.baseColorId && externalOptions.decalColorId && formData.modelData?.id) {
         try {
           setLoading(true)
-          const baseUrl = "https://ben10.scaleupdevagency.com"
+          const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
           const response = await fetch(
             `${baseUrl}/api/model-color-wise-image?model_id=${formData.modelData.id}&color_1_id=${externalOptions.baseColorId}&color_2_id=${externalOptions.decalColorId}`,
             {
@@ -177,27 +174,30 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
     fetchModelColorImages()
   }, [externalOptions.baseColorId, externalOptions.decalColorId, formData.modelData?.id])
 
-  const handleBaseColorSelect = (color: any) => {
-    handleColorSelect({
-      baseColor: color.id,
-      baseColorId: color.colorId,
-    })
-  }
-
-  const handleDecalColorSelect = (color: any) => {
-    handleColorSelect({
-      decalColor: color.id,
-      decalColorId: color.colorId,
-    })
-  }
-
-  const baseUrl = "https://ben10.scaleupdevagency.com"
+  const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
 
   // Get caravan images from API or fallback
-  const getCaravanImages = () => {
+  const getCaravanImages = (): string[] => {
     if (modelColorImages.length > 0) {
-      const baseUrl = "https://ben10.scaleupdevagency.com"
-      return modelColorImages.map((img) => `${baseUrl}/${img.image}`)
+      const baseUrl = `${import.meta.env.VITE_BACKEND_URL}`
+      const images: string[] = []
+
+      modelColorImages.forEach((img) => {
+        if (img.image) {
+          images.push(`${baseUrl}/${img.image}`)
+        }
+        if (img.image2) {
+          images.push(`${baseUrl}/${img.image2}`)
+        }
+      })
+
+      return images.length > 0
+        ? images
+        : [
+            "/placeholder.svg?height=300&width=500",
+            "/placeholder.svg?height=300&width=500",
+            "/placeholder.svg?height=300&width=500",
+          ]
     }
 
     // Fallback images
@@ -295,7 +295,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
               </div>
             )}
             <div className="grid grid-cols-3 gap-4">
-              {decalColors &&
+              {baseColors &&
                 decalColors.length > 0 &&
                 decalColors.slice(0, 6).map((color) => (
                   <button
@@ -402,10 +402,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                   <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
                     <img
                       src={
-                        baseColors.find((c) => c.id === externalOptions.baseColor)?.image ||
-                        "/placeholder.svg?height=20&width=20&query=silver color" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg"
+                        baseColors.find((c) => c.id === externalOptions.baseColor)?.image 
                       }
                       alt={baseColors.find((c) => c.id === externalOptions.baseColor)?.name || "Silver"}
                       className="w-full h-full object-cover"
@@ -423,10 +420,7 @@ export default function ExternalOptions({ formData, updateFormData }: StepProps)
                   <div className="w-5 h-5 rounded overflow-hidden border border-gray-600">
                     <img
                       src={
-                        decalColors.find((c) => c.id === externalOptions.decalColor)?.image ||
-                        "/placeholder.svg?height=20&width=20&query=teal color" ||
-                        "/placeholder.svg" ||
-                        "/placeholder.svg"
+                        decalColors.find((c) => c.id === externalOptions.decalColor)?.image
                       }
                       alt={decalColors.find((c) => c.id === externalOptions.decalColor)?.name || "Snowy Teal"}
                       className="w-full h-full object-cover"

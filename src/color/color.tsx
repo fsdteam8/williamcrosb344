@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -65,36 +65,14 @@ export default function Color() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [currentColor, setCurrentColor] = useState<Color | null>(null)
 
-  const getAuthToken = () => {
+  const getAuthToken = useCallback(() => {
     return localStorage.getItem("authToken") || ""
-  }
+  }, [])
 
-  // Mock data for demonstration
-  const mockColors: Color[] = [
-    {
-      id: 1,
-      name: "Red",
-      code: "#FF0000",
-      image: null,
-      status: "active",
-      type: "primary",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      name: "Green",
-      code: "#00FF00",
-      image: null,
-      status: "inactive",
-      type: "secondary",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ]
 
   // Fetch colors
-  const fetchColors = async (page = 1) => {
+  // Memoize fetchColors with useCallback
+  const fetchColors = useCallback(async (page = 1) => {
     try {
       setLoading(true)
       const token = getAuthToken()
@@ -127,21 +105,16 @@ export default function Color() {
     } catch (error) {
       console.error("Error fetching colors:", error)
       toast.error("Failed to fetch colors")
-
-      // Fallback to mock data if API fails
-      setColors(mockColors)
-      setFilteredColors(mockColors)
-      setTotalPages(1)
-      setTotalItems(mockColors.length)
       setCurrentPage(1)
     } finally {
       setLoading(false)
     }
-  }
+  }, [getAuthToken]) // Empty dependency array since we only use setState functions
 
+  // Then update the useEffect
   useEffect(() => {
     fetchColors(currentPage)
-  }, [currentPage])
+  }, [currentPage, fetchColors]) // Now includes fetchColors in dependencies
 
   // Search functionality
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,9 +231,9 @@ export default function Color() {
         body: isFormData
           ? formData
           : JSON.stringify({
-              ...(Object.fromEntries((formData as any).entries())),
-              _method: "PUT",
-            }),
+            ...(Object.fromEntries((formData as FormData).entries())),
+            _method: "PUT",
+          }),
       }
 
       const response = await fetch(
@@ -415,7 +388,7 @@ export default function Color() {
           <h1 className="text-2xl font-bold">Colors</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Colors</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Color
         </Button>
       </div>

@@ -76,7 +76,7 @@ export default function Manufacturer() {
   const fetchManufacturerOptions = async (page = 1) => {
     try {
       setLoading(true)
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options?page=${page}`)
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options?page=${page}`)
       const data: ApiResponse = await response.json()
 
       if (data.success) {
@@ -163,7 +163,7 @@ export default function Manufacturer() {
 
     try {
       const response = await fetch(
-        `https://ben10.scaleupdevagency.com/api/addtional-options/${currentOption.id}?_method=PUT`,
+        `${import.meta.env.VITE_BACKEND_URL}/api/addtional-options/${currentOption.id}?_method=PUT`,
         {
           method: "POST",
           headers: {
@@ -197,7 +197,7 @@ export default function Manufacturer() {
     if (!itemToDelete) return
 
     try {
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${itemToDelete}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options/${itemToDelete}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${getAuthToken()}`,
@@ -236,7 +236,7 @@ export default function Manufacturer() {
     try {
       await Promise.all(
         selectedItems.map((id) =>
-          fetch(`https://ben10.scaleupdevagency.com/api/addtional-options/${id}`, {
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/addtional-options/${id}`, {
             method: "DELETE",
             headers: {
               Authorization: `Bearer ${getAuthToken()}`,
@@ -262,7 +262,7 @@ export default function Manufacturer() {
           <h1 className="text-2xl font-bold">Manufacturer Options</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Manufacturer Options</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cuirsor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Option
         </Button>
       </div>

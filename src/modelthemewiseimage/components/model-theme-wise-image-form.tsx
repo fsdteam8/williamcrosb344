@@ -55,8 +55,8 @@ export function ModelThemeWiseImageForm({ open, onOpenChange, onSubmit, initialD
       try {
         setLoading(true)
         const [modelsResponse, themesResponse] = await Promise.all([
-          fetch("https://ben10.scaleupdevagency.com/api/models"),
-          fetch("https://ben10.scaleupdevagency.com/api/themes"),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/models`),
+          fetch(`${import.meta.env.VITE_BACKEND_URL}/api/themes`),
         ])
 
         if (!modelsResponse.ok) throw new Error("Failed to fetch vehicle models")
@@ -87,7 +87,7 @@ export function ModelThemeWiseImageForm({ open, onOpenChange, onSubmit, initialD
         image: null,
       })
       setImagePreview(initialData.image 
-        ? `https://ben10.scaleupdevagency.com/${initialData.image}`
+        ? `${import.meta.env.VITE_BACKEND_URL}/${initialData.image}`
         : null)
     } else {
       setFormData({
@@ -118,7 +118,7 @@ export function ModelThemeWiseImageForm({ open, onOpenChange, onSubmit, initialD
       reader.readAsDataURL(file)
     } else if (initialData?.image) {
       // Revert to original image if file selection is cleared
-      setImagePreview(`https://ben10.scaleupdevagency.com/${initialData.image}`)
+      setImagePreview(`${import.meta.env.VITE_BACKEND_URL}/${initialData.image}`)
     } else {
       setImagePreview(null)
     }
@@ -173,7 +173,7 @@ export function ModelThemeWiseImageForm({ open, onOpenChange, onSubmit, initialD
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{initialData ? "Edit Image" : "Add New Image"}</DialogTitle>
+          <DialogTitle>{initialData ? "Edit Image" : "Add New theme"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

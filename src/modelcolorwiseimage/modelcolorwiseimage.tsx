@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -82,50 +82,50 @@ export default function ModelColorWiseImage() {
   }
 
   // Fetch model color wise images
-  const fetchModelColorImages = async (page = 1) => {
-    try {
-      setLoading(true)
-      const token = getAuthToken()
+ const fetchModelColorImages = useCallback(async (page = 1) => {
+  try {
+    setLoading(true)
+    const token = getAuthToken()
 
-      const requestOptions: RequestInit = {
-        method: "GET",
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-          "Content-Type": "application/json",
-        },
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image?page=${page}`,
-        requestOptions,
-      )
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data: ApiResponse = await response.json()
-
-      if (data.success) {
-        setModelColorImages(data.data.data)
-        setFilteredImages(data.data.data)
-        setTotalPages(data.total_pages)
-        setTotalItems(data.total)
-        setCurrentPage(data.current_page)
-      } else {
-        throw new Error(data.message || "Failed to fetch model color wise images")
-      }
-    } catch (error) {
-      console.error("Error fetching model color wise images:", error)
-      toast.error("Failed to fetch model color wise images. Please try again later.")
-    } finally {
-      setLoading(false)
+    const requestOptions: RequestInit = {
+      method: "GET",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+        "Content-Type": "application/json",
+      },
     }
+
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_URL}/api/model-color-wise-image?page=${page}`,
+      requestOptions,
+    )
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data: ApiResponse = await response.json()
+
+    if (data.success) {
+      setModelColorImages(data.data.data)
+      setFilteredImages(data.data.data)
+      setTotalPages(data.total_pages)
+      setTotalItems(data.total)
+      setCurrentPage(data.current_page)
+    } else {
+      throw new Error(data.message || "Failed to fetch model color wise images")
+    }
+  } catch (error) {
+    console.error("Error fetching model color wise images:", error)
+    toast.error("Failed to fetch model color wise images. Please try again later.")
+  } finally {
+    setLoading(false)
   }
+}, []) // Empty dependency array since we don't use any external variables
 
   useEffect(() => {
     fetchModelColorImages(currentPage)
-  }, [currentPage])
+  }, [currentPage, fetchModelColorImages])
 
   // Search functionality
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -228,7 +228,7 @@ export default function ModelColorWiseImage() {
         body: isFormData
           ? formData
           : JSON.stringify({
-              ...(Object.fromEntries((formData as any).entries())),
+              ...(Object.fromEntries((formData as FormData).entries())),
               _method: "PUT",
             }),
       }
@@ -370,7 +370,7 @@ export default function ModelColorWiseImage() {
           <h1 className="text-2xl font-bold">Model Color Wise Images</h1>
           <div className="text-sm text-muted-foreground">Dashboard / Model Color Wise Images</div>
         </div>
-        <Button className="bg-red-500 hover:bg-red-600" onClick={() => setIsAddModalOpen(true)}>
+        <Button className="cursor-pointer" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add New Image
         </Button>
       </div>

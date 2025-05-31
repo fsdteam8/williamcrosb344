@@ -141,7 +141,7 @@ const OrderSubmissionTable: React.FC = () => {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/orders?page=${page}`)
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?page=${page}`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -166,7 +166,7 @@ const OrderSubmissionTable: React.FC = () => {
       setIsLoadingDetails(true)
       setDetailsError(null)
 
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/orders?id=${id}`)
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?id=${id}`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -195,7 +195,7 @@ const OrderSubmissionTable: React.FC = () => {
     try {
       setIsDeleting(true)
 
-      const response = await fetch(`https://ben10.scaleupdevagency.com/api/orders/${selectedOrderId}`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders/${selectedOrderId}`, {
         method: "DELETE",
       })
 
@@ -559,7 +559,7 @@ const OrderSubmissionTable: React.FC = () => {
                           <p className="text-sm font-medium text-muted-foreground">Exterior View</p>
                           <div className="relative h-48 w-full rounded-md overflow-hidden border">
                             <img
-                              src={`https://ben10.scaleupdevagency.com/${selectedOrderDetails.vehicle_model.outer_image}`}
+                              src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.vehicle_model.outer_image}`}
                               alt={`${selectedOrderDetails.vehicle_model.name} exterior`}
                               className="object-cover w-full h-full"
                             />
@@ -569,7 +569,7 @@ const OrderSubmissionTable: React.FC = () => {
                           <p className="text-sm font-medium text-muted-foreground">Interior View</p>
                           <div className="relative h-48 w-full rounded-md overflow-hidden border">
                             <img
-                              src={`https://ben10.scaleupdevagency.com/${selectedOrderDetails.vehicle_model.inner_image}`}
+                              src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.vehicle_model.inner_image}`}
                               alt={`${selectedOrderDetails.vehicle_model.name} interior`}
                               className="object-cover w-full h-full"
                             />
@@ -620,7 +620,7 @@ const OrderSubmissionTable: React.FC = () => {
                         <p className="text-sm font-medium text-muted-foreground">Theme Preview</p>
                         <div className="relative h-48 w-full rounded-md overflow-hidden border">
                           <img
-                            src={`https://ben10.scaleupdevagency.com/${selectedOrderDetails.theme.image}`}
+                            src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.theme.image}`}
                             alt={selectedOrderDetails.theme.name}
                             className="object-cover w-full h-full"
                           />
@@ -656,7 +656,7 @@ const OrderSubmissionTable: React.FC = () => {
                             <div key={color.id} className="space-y-2">
                               <div className="relative h-20 w-full rounded-md overflow-hidden border">
                                 <img
-                                  src={`https://ben10.scaleupdevagency.com/${color.image}`}
+                                  src={`${import.meta.env.VITE_BACKEND_URL}/${color.image}`}
                                   alt={color.name}
                                   className="object-cover w-full h-full"
                                 />

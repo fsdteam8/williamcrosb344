@@ -1,24 +1,15 @@
+"use client"
 
-
-import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Trash2, Loader2, ChevronLeft, ChevronRight, Eye } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { toast } from "react-toastify"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import OrderDetailsModal from "./components/order-details"
+import DeleteOrderModal from "./components/delete-order-modal"
 
-// Updated interfaces to match actual API response
+// Interfaces
 interface OrderData {
   id: number
   vehicle_model_id: number
@@ -41,86 +32,140 @@ interface ApiResponse {
   total: number
 }
 
-// Detailed order interfaces
-interface VehicleModel {
+// Replace the OrderDetail interface with this one that matches your lib/types.ts
+interface OrderDetail {
   id: number
-  name: string
-  sleep_person: string
-  description: string
-  inner_image: string
-  outer_image: string
-  category_id: number
+  uniq_id?: string
+  vehicle_model_id: number
+  theme_id: number
+  customer_info_id: number
   base_price: string
-  price: string
-  created_at: string
-  updated_at: string
-}
-
-interface Theme {
-  id: number
-  name: string
-  image: string
-  flooring_name: string
-  flooring_image: string
-  cabinetry_1_name: string
-  cabinetry_1_image: string
-  table_top_1_name: string
-  table_top_1_image: string
-  seating_1_name: string
-  seating_1_image: string
-  seating_2_name: string
-  seating_2_image: string
-  cabinetry_2_name: string
-  cabinetry_2_image: string
-  table_top_2_name: string
-  table_top_2_image: string
-  created_at: string
-  updated_at: string
-}
-
-interface CustomerInfo {
-  id: number
-  first_name: string
-  last_name: string
-  email: string
-  phone: string
-  postal_code: string
-  created_at: string
-  updated_at: string
-}
-
-interface Color {
-  id: number
-  name: string
-  code: string | null
-  image: string
+  total_price: string
   status: string
-  type: string
   created_at: string
   updated_at: string
-  pivot: {
-    order_id: number
-    color_id: number
+  vehicle_model: {
+    id: number
+    name: string
+    sleep_person: string
+    description: string
+    inner_image: string
+    outer_image?: string | null
+    category_id: number
+    base_price: string
+    price: string
+    created_at: string
+    updated_at: string
+  }
+  theme: {
+    id: number
+    name: string
+    image: string
+    flooring_name: string
+    flooring_image: string
+    cabinetry_1_name: string
+    cabinetry_1_image: string
+    table_top_1_name: string
+    table_top_1_image: string
+    seating_1_name: string
+    seating_1_image: string
+    seating_2_name: string
+    seating_2_image: string
+    cabinetry_2_name: string
+    cabinetry_2_image: string
+    table_top_2_name: string
+    table_top_2_image: string
+    created_at: string
+    updated_at: string
+  }
+  customer_info: {
+    id: number
+    first_name: string
+    last_name: string
+    email: string
+    phone: string
+    postal_code: string
+    created_at: string
+    updated_at: string
+  }
+  colors: {
+    id: number
+    name: string
+    code: string | null
+    image: string
+    status: string
+    type: string
+    created_at: string
+    updated_at: string
+    pivot: {
+      order_id: number
+      color_id: number
+    }
+  }[]
+  additional_options: {
+    id: number
+    name: string
+    price: string
+    type: string
+  }[]
+}
+
+// Helper functions
+const formatStatus = (status: string | undefined | null): string => {
+  if (!status || typeof status !== "string") {
+    return "Unknown"
+  }
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+const formatCurrency = (amount: string | number | undefined | null): string => {
+  if (!amount) return "$0.00"
+
+  const numericAmount = typeof amount === "string" ? Number.parseFloat(amount) : amount
+  if (isNaN(numericAmount)) return "$0.00"
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(numericAmount)
+}
+
+const formatDate = (dateString: string | undefined | null): string => {
+  if (!dateString) return "N/A"
+
+  try {
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  } catch (error) {
+    console.error("Date formatting error:", error)
+    return "Invalid Date"
   }
 }
 
-interface OrderDetail extends OrderData {
-  vehicle_model: VehicleModel
-  theme: Theme
-  customer_info: CustomerInfo
-  colors: Color[]
+const getStatusBadgeClasses = (status: string | undefined | null): string => {
+  const normalizedStatus = status?.toLowerCase() || "unknown"
+
+  switch (normalizedStatus) {
+    case "pending":
+      return "bg-yellow-100 text-yellow-800"
+    case "delivered":
+      return "bg-green-100 text-green-800"
+    case "cancelled":
+      return "bg-red-100 text-red-800"
+    default:
+      return "bg-gray-100 text-gray-800"
+  }
 }
 
-interface OrderDetailResponse {
-  success: boolean
-  message: string
-  data: OrderDetail
-}
-
-const OrderSubmissionTable: React.FC = () => {
+export default function OrderTable() {
   const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null)
   const [orders, setOrders] = useState<OrderData[]>([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -135,50 +180,92 @@ const OrderSubmissionTable: React.FC = () => {
   const [isLoadingDetails, setIsLoadingDetails] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
 
-  // Fetch orders data
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || ""
+
+  const getAuthToken = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("authToken") || ""
+    }
+    return ""
+  }
+
+  // Fetch orders data with error handling
   const fetchOrders = async (page = 1) => {
+    const token = getAuthToken()
     try {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?page=${page}`)
+      const response = await fetch(`${backendUrl}/api/orders?page=${page}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data: ApiResponse = await response.json()
+
+      // Validate the response data
+      if (!data || !Array.isArray(data.data)) {
+        throw new Error("Invalid response format")
+      }
+
       setApiResponse(data)
       setOrders(data.data)
-      setCurrentPage(data.current_page)
-      setItemsPerPage(data.per_page)
+      setCurrentPage(data.current_page || 1)
+      setItemsPerPage(data.per_page || 10)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch orders data")
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch orders data"
+      setError(errorMessage)
       console.error("Fetch error:", err)
+
+      // Set empty state on error
+      setOrders([])
+      setApiResponse(null)
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Fetch order details
+  // Update the fetchOrderDetails function to handle the nested order structure
   const fetchOrderDetails = async (id: number) => {
     try {
+      const token = getAuthToken()
       setIsLoadingDetails(true)
       setDetailsError(null)
+      setSelectedOrderId(id)
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders?id=${id}`)
+      const response = await fetch(`${backendUrl}/api/orders?id=${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      const data: OrderDetailResponse = await response.json()
-      setSelectedOrderDetails(data.data)
+      const data = await response.json()
+
+      // Updated to handle the new API structure where order data is under data.order
+      if (!data || !data.data || !data.data.order) {
+        throw new Error("Invalid order details response")
+      }
+
+      setSelectedOrderDetails(data.data.order)
       setIsDetailsModalOpen(true)
     } catch (err) {
-      setDetailsError(err instanceof Error ? err.message : "Failed to fetch order details")
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch order details"
+      setDetailsError(errorMessage)
       console.error("Details fetch error:", err)
-      toast.error("Failed to load order details. Please try again.")
+
+      // Show user-friendly error message
+      alert("Failed to load order details. Please try again.")
     } finally {
       setIsLoadingDetails(false)
     }
@@ -188,15 +275,20 @@ const OrderSubmissionTable: React.FC = () => {
     fetchOrders()
   }, [])
 
-  // Handle delete order
+  // Handle delete order with error handling
   const handleDelete = async () => {
     if (!selectedOrderId) return
 
     try {
       setIsDeleting(true)
+      const token = getAuthToken()
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/orders/${selectedOrderId}`, {
+      const response = await fetch(`${backendUrl}/api/orders/${selectedOrderId}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
 
       if (!response.ok) {
@@ -205,58 +297,64 @@ const OrderSubmissionTable: React.FC = () => {
 
       // Remove deleted order from state
       setOrders(orders.filter((order) => order.id !== selectedOrderId))
-      setIsModalOpen(false)
+      setIsDeleteModalOpen(false)
       setSelectedOrderId(null)
 
-      // Show success toast
-      toast.success(`Order #${selectedOrderId} deleted successfully!`, {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
+      // Show success message
+      alert(`Order #${selectedOrderId} deleted successfully!`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete order")
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete order"
+      setError(errorMessage)
       console.error("Delete error:", err)
-
-      // Show error toast
-      toast.error(`Failed to delete order #${selectedOrderId}. Please try again.`, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
+      alert(`Failed to delete order #${selectedOrderId}. Please try again.`)
     } finally {
       setIsDeleting(false)
     }
   }
 
-  // Format currency
-  const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(Number.parseFloat(amount))
-  }
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     fetchOrders(page)
+  }
+
+  // Function to update order status with error handling
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    const token = getAuthToken()
+    try {
+      const response = await fetch(`${backendUrl}/api/orders/${orderId}/status`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Update the order in the local state
+      setOrders(orders.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order)))
+
+      // If the details modal is open and showing this order, update its status too
+      if (selectedOrderDetails && selectedOrderDetails.id === orderId) {
+        setSelectedOrderDetails({
+          ...selectedOrderDetails,
+          status: newStatus,
+        })
+      }
+
+      alert(`Order #${orderId} status updated to ${newStatus}!`)
+
+      return data
+    } catch (err) {
+      console.error("Status update error:", err)
+      alert(`Failed to update order status. Please try again.`)
+      throw err
+    }
   }
 
   if (isLoading) {
@@ -276,6 +374,9 @@ const OrderSubmissionTable: React.FC = () => {
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+        <Button onClick={() => fetchOrders()} className="mt-4" variant="outline">
+          Try Again
+        </Button>
       </div>
     )
   }
@@ -294,9 +395,7 @@ const OrderSubmissionTable: React.FC = () => {
     <div className="p-4 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Orders</h1>
-        <div className="text-sm text-muted-foreground">
-        
-        </div>
+        <div className="text-sm text-muted-foreground">{apiResponse && `Total: ${apiResponse.total} orders`}</div>
       </div>
 
       <div className="border rounded-lg">
@@ -317,20 +416,39 @@ const OrderSubmissionTable: React.FC = () => {
           <TableBody>
             {orders.map((order) => (
               <TableRow key={order.id}>
-                <TableCell className="font-medium">#{order.id}</TableCell>
-                <TableCell>{order.customer_info_id}</TableCell>
-                <TableCell>{order.vehicle_model_id}</TableCell>
-                <TableCell>{order.theme_id}</TableCell>
+                <TableCell className="font-medium">#{order.id || "N/A"}</TableCell>
+                <TableCell>{order.customer_info_id || "N/A"}</TableCell>
+                <TableCell>{order.vehicle_model_id || "N/A"}</TableCell>
+                <TableCell>{order.theme_id || "N/A"}</TableCell>
                 <TableCell>{formatCurrency(order.base_price)}</TableCell>
                 <TableCell className="font-semibold">{formatCurrency(order.total_price)}</TableCell>
                 <TableCell>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      order.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
-                    }`}
+                  <Select
+                    value={order.status || "unknown"}
+                    onValueChange={(newStatus) => updateOrderStatus(order.id, newStatus)}
                   >
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
+                    <SelectTrigger className="w-32">
+                      <SelectValue>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClasses(order.status)}`}
+                        >
+                          {formatStatus(order.status)}
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Pending
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="delivered">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Delivered
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </TableCell>
                 <TableCell>{formatDate(order.created_at)}</TableCell>
                 <TableCell className="text-right">
@@ -339,10 +457,9 @@ const OrderSubmissionTable: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => fetchOrderDetails(order.id)}
-                      className=""
-                      disabled={isLoadingDetails}
+                      disabled={isLoadingDetails && selectedOrderId === order.id}
                     >
-                      {isLoadingDetails && order.id === selectedOrderId ? (
+                      {isLoadingDetails && selectedOrderId === order.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Eye className="h-4 w-4" />
@@ -353,9 +470,8 @@ const OrderSubmissionTable: React.FC = () => {
                       size="sm"
                       onClick={() => {
                         setSelectedOrderId(order.id)
-                        setIsModalOpen(true)
+                        setIsDeleteModalOpen(true)
                       }}
-                      className=""
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -434,302 +550,26 @@ const OrderSubmissionTable: React.FC = () => {
       </div>
 
       {/* Order Details Modal */}
-      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="!w-[800px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Order Details #{selectedOrderDetails?.id}</DialogTitle>
-            <DialogDescription>
-              Created on {selectedOrderDetails && formatDate(selectedOrderDetails.created_at)}
-            </DialogDescription>
-          </DialogHeader>
-
-          {isLoadingDetails ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2">Loading order details...</span>
-            </div>
-          ) : detailsError ? (
-            <Alert variant="destructive">
-              <AlertDescription>{detailsError}</AlertDescription>
-            </Alert>
-          ) : (
-            selectedOrderDetails && (
-              <Tabs defaultValue="order" className="w-full">
-                <TabsList className="grid grid-cols-4 mb-4">
-                  <TabsTrigger value="order">Order Info</TabsTrigger>
-                  <TabsTrigger value="customer">Customer</TabsTrigger>
-                  <TabsTrigger value="vehicle">Vehicle Model</TabsTrigger>
-                  <TabsTrigger value="theme">Theme & Colors</TabsTrigger>
-                </TabsList>
-
-                {/* Order Info Tab */}
-                <TabsContent value="order" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Order Information</CardTitle>
-                      <CardDescription>Basic order details and pricing</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Order ID</p>
-                        <p className="text-lg font-semibold">#{selectedOrderDetails.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Status</p>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            selectedOrderDetails.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {selectedOrderDetails.status.charAt(0).toUpperCase() + selectedOrderDetails.status.slice(1)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Base Price</p>
-                        <p className="text-lg">{formatCurrency(selectedOrderDetails.base_price)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Total Price</p>
-                        <p className="text-lg font-bold text-green-600">
-                          {formatCurrency(selectedOrderDetails.total_price)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Created Date</p>
-                        <p>{formatDate(selectedOrderDetails.created_at)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Last Updated</p>
-                        <p>{formatDate(selectedOrderDetails.updated_at)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Customer Tab */}
-                <TabsContent value="customer" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Customer Information</CardTitle>
-                      <CardDescription>Contact details for the customer</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Customer ID</p>
-                        <p className="text-lg font-semibold">#{selectedOrderDetails.customer_info.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Full Name</p>
-                        <p className="text-lg">
-                          {selectedOrderDetails.customer_info.first_name} {selectedOrderDetails.customer_info.last_name}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Email</p>
-                        <p className="text-lg">{selectedOrderDetails.customer_info.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                        <p className="text-lg">{selectedOrderDetails.customer_info.phone}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Postal Code</p>
-                        <p className="text-lg">{selectedOrderDetails.customer_info.postal_code}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Customer Since</p>
-                        <p>{formatDate(selectedOrderDetails.customer_info.created_at)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Vehicle Model Tab */}
-                <TabsContent value="vehicle" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{selectedOrderDetails.vehicle_model.name}</CardTitle>
-                      <CardDescription>Vehicle model details and specifications</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-muted-foreground">Exterior View</p>
-                          <div className="relative h-48 w-full rounded-md overflow-hidden border">
-                            <img
-                              src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.vehicle_model.outer_image}`}
-                              alt={`${selectedOrderDetails.vehicle_model.name} exterior`}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-muted-foreground">Interior View</p>
-                          <div className="relative h-48 w-full rounded-md overflow-hidden border">
-                            <img
-                              src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.vehicle_model.inner_image}`}
-                              alt={`${selectedOrderDetails.vehicle_model.name} interior`}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Model ID</p>
-                          <p className="text-lg font-semibold">#{selectedOrderDetails.vehicle_model.id}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Sleeps</p>
-                          <p className="text-lg">{selectedOrderDetails.vehicle_model.sleep_person} people</p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Base Price</p>
-                          <p className="text-lg font-semibold">
-                            {formatCurrency(selectedOrderDetails.vehicle_model.base_price)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Price</p>
-                          <p className="text-lg font-semibold">
-                            {formatCurrency(selectedOrderDetails.vehicle_model.price)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Description</p>
-                        <p className="mt-1 text-sm">{selectedOrderDetails.vehicle_model.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                {/* Theme & Colors Tab */}
-                <TabsContent value="theme" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{selectedOrderDetails.theme.name}</CardTitle>
-                      <CardDescription>Theme details and color selections</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-muted-foreground">Theme Preview</p>
-                        <div className="relative h-48 w-full rounded-md overflow-hidden border">
-                          <img
-                            src={`${import.meta.env.VITE_BACKEND_URL}/${selectedOrderDetails.theme.image}`}
-                            alt={selectedOrderDetails.theme.name}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Interior Selections</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">Flooring</p>
-                            <p className="text-sm">{selectedOrderDetails.theme.flooring_name}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">Cabinetry</p>
-                            <p className="text-sm">{selectedOrderDetails.theme.cabinetry_1_name}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">Benchtops</p>
-                            <p className="text-sm">{selectedOrderDetails.theme.table_top_1_name}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">Seating Fabric</p>
-                            <p className="text-sm">{selectedOrderDetails.theme.seating_1_name}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Selected Colors</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {selectedOrderDetails.colors.map((color) => (
-                            <div key={color.id} className="space-y-2">
-                              <div className="relative h-20 w-full rounded-md overflow-hidden border">
-                                <img
-                                  src={`${import.meta.env.VITE_BACKEND_URL}/${color.image}`}
-                                  alt={color.name}
-                                  className="object-cover w-full h-full"
-                                />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">{color.name}</p>
-                                <p className="text-xs text-muted-foreground">{color.type}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            )
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <OrderDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        orderId={selectedOrderId}
+        orderDetails={selectedOrderDetails}
+        isLoading={isLoadingDetails}
+        error={detailsError}
+        onStatusChange={updateOrderStatus}
+        backendUrl={backendUrl}
+      />
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Order Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete order #{selectedOrderId}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="bg-muted p-4 rounded-lg">
-              <p className="text-sm">
-                <strong>Order:</strong> #{selectedOrderId}
-                <br />
-                <strong>Customer ID:</strong> {orders.find((o) => o.id === selectedOrderId)?.customer_info_id}
-                <br />
-                <strong>Total:</strong>{" "}
-                {formatCurrency(orders.find((o) => o.id === selectedOrderId)?.total_price || "0")}
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsModalOpen(false)
-                setSelectedOrderId(null)
-              }}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex items-center space-x-2"
-            >
-              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-              <span>{isDeleting ? "Deleting..." : "Delete Order"}</span>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteOrderModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        orderId={selectedOrderId}
+        orderData={orders.find((o) => o.id === selectedOrderId)}
+        isDeleting={isDeleting}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
-
-export default OrderSubmissionTable

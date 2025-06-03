@@ -46,7 +46,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <Navigate to={ROUTE_PATHS.LOGIN} replace />;
   }
 
-  return <Layout>{children}</Layout>;
+  return <Layout>
+    
+    
+    {/* Render the children components inside the layout */}
+    {children}
+    
+    
+    </Layout>;
 };
 
 function App() {

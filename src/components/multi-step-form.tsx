@@ -359,21 +359,21 @@ export default function MultiStepForm() {
   }
 
   return (
-    <div className="container">
+    <div className="container py-24">
       <div className="flex flex-col min-h-screen">
         <header className="py-8">
           <h1 className="text-2xl font-bold text-center text-[#999999] mb-4">Build Your Dream</h1>
-          <p className="text-sm text-center text-[#333333] mt-1">
+          <p className="text-sm text-center text-white mt-1">
             Select your Caravan, Accessories and place a hold for our next available delivery date through our quote
             builder.
           </p>
         </header>
 
-        <div className="px-6 py-4">
+        <div className="py-4">
           <StepBar currentStep={currentStep} onStepChange={handleStepChange} />
         </div>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 py-6">
           {renderStep()}
 
           <div className="flex justify-between mt-8">

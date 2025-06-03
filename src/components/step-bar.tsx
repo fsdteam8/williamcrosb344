@@ -18,7 +18,7 @@ export default function StepBar({ currentStep }: StepBarProps) {
   ]
 
   return (
-    <div className="container">
+    <div className="">
       <div className="flex justify-between">
         {steps.map((step, index) => (
           <div key={step.number} className="flex items-center">
